@@ -1,0 +1,8 @@
+sagemaker-extension.diff
+disable-online-services.diff
+disable-telemetry.diff
+base-path.diff
+webview.diff
+local-storage.diff
+sagemaker-integration.diff
+license.diff
