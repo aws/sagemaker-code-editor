@@ -323,7 +323,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/extension-bro
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extension/extension-browser.webpack.config.js
 @@ -0,0 +1,17 @@
 +/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Copyright Amazon.com Inc. or its affiliates. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
 + *--------------------------------------------------------------------------------------------*/
 +
@@ -345,7 +345,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/extension.web
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extension/extension.webpack.config.js
 @@ -0,0 +1,20 @@
 +/*---------------------------------------------------------------------------------------------
-+ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Copyright Amazon.com Inc. or its affiliates. All rights reserved.
 + *  Licensed under the MIT License. See License.txt in the project root for license information.
 + *--------------------------------------------------------------------------------------------*/
 +
