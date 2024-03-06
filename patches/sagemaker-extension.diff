@@ -265,7 +265,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/README.md
 @@ -0,0 +1,5 @@
 +# Sagemaker Extension
 +
-+The SageMaker Extension utilizes the web browser's local cookies to determine the operational status. This extension remains active continuously.
++The SageMaker Extension alerts users to sign in again before their session expires. It remains active continuously and cannot be disabled.
 +
 +Session Management: The extension monitors the SageMaker cookie to ensure seamless session continuity. It proactively alerts users to sign in again before the session expires, enhancing the user experience by preventing unexpected session interruptions.
 \ No newline at end of file
