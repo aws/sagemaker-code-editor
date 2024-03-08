@@ -16,7 +16,6 @@ import { getServiceMachineId } from 'vs/platform/externalServices/common/service
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { TelemetryLevel } from 'vs/platform/telemetry/common/telemetry';
 import { getTelemetryLevel, supportsTelemetry } from 'vs/platform/telemetry/common/telemetryUtils';
-import { RemoteAuthorities } from 'vs/base/common/network';
 import { getRemoteServerRootPath } from 'vs/platform/remote/common/remoteHosts';
 import { TargetPlatform } from 'vs/platform/extensions/common/extensions';
 
@@ -102,7 +101,7 @@ export abstract class AbstractExtensionResourceLoaderService implements IExtensi
 					: version,
 				path: 'extension'
 			}));
-			return this._isWebExtensionResourceEndPoint(uri) ? uri.with({ scheme: RemoteAuthorities.getPreferredWebSchema() }) : uri;
+			return this._isWebExtensionResourceEndPoint(uri) ? URI.joinPath(URI.parse(window.location.href), uri.path) : uri;
 		}
 		return undefined;
 	}

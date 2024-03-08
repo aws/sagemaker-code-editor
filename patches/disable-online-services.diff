@@ -1,0 +1,48 @@
+Index: sagemaker-code-editor/vscode/src/vs/platform/update/common/update.config.contribution.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/platform/update/common/update.config.contribution.ts
++++ sagemaker-code-editor/vscode/src/vs/platform/update/common/update.config.contribution.ts
+@@ -18,7 +18,7 @@ configurationRegistry.registerConfigurat
+ 		'update.mode': {
+ 			type: 'string',
+ 			enum: ['none', 'manual', 'start', 'default'],
+-			default: 'default',
++			default: 'none',
+ 			scope: ConfigurationScope.APPLICATION,
+ 			description: localize('updateMode', "Configure whether you receive automatic updates. Requires a restart after change. The updates are fetched from a Microsoft online service."),
+ 			tags: ['usesOnlineServices'],
+@@ -50,7 +50,7 @@ configurationRegistry.registerConfigurat
+ 		},
+ 		'update.showReleaseNotes': {
+ 			type: 'boolean',
+-			default: true,
++			default: false,
+ 			scope: ConfigurationScope.APPLICATION,
+ 			description: localize('showReleaseNotes', "Show Release Notes after an update. The Release Notes are fetched from a Microsoft online service."),
+ 			tags: ['usesOnlineServices']
+Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/preferences/common/preferencesContribution.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/preferences/common/preferencesContribution.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/preferences/common/preferencesContribution.ts
+@@ -151,7 +151,7 @@ registry.registerConfiguration({
+ 		'workbench.settings.enableNaturalLanguageSearch': {
+ 			'type': 'boolean',
+ 			'description': nls.localize('enableNaturalLanguageSettingsSearch', "Controls whether to enable the natural language search mode for settings. The natural language search is provided by a Microsoft online service."),
+-			'default': true,
++			'default': false,
+ 			'scope': ConfigurationScope.WINDOW,
+ 			'tags': ['usesOnlineServices']
+ 		},
+Index: sagemaker-code-editor/vscode/src/vs/workbench/services/assignment/common/assignmentService.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/services/assignment/common/assignmentService.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/services/assignment/common/assignmentService.ts
+@@ -143,7 +143,7 @@ registry.registerConfiguration({
+ 		'workbench.enableExperiments': {
+ 			'type': 'boolean',
+ 			'description': localize('workbench.enableExperiments', "Fetches experiments to run from a Microsoft online service."),
+-			'default': true,
++			'default': false,
+ 			'scope': ConfigurationScope.APPLICATION,
+ 			'restricted': true,
+ 			'tags': ['usesOnlineServices']

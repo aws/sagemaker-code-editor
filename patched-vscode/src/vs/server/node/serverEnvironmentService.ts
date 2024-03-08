@@ -87,6 +87,9 @@ export const serverOptions: OptionDescriptions<Required<ServerParsedArgs>> = {
 
 	'compatibility': { type: 'string' },
 
+	/* ----- sagemaker ----- */
+	'base-path': { type: 'string' },
+
 	_: OPTIONS['_']
 };
 
@@ -202,6 +205,9 @@ export interface ServerParsedArgs {
 	'locate-shell-integration-path'?: string;
 
 	compatibility: string;
+
+	/* ----- sagemaker ----- */
+	'base-path'?: string,
 
 	_: string[];
 }
