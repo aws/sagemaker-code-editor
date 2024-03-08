@@ -63,7 +63,6 @@ const compilations = [
 	'php-language-features/tsconfig.json',
 	'search-result/tsconfig.json',
 	'references-view/tsconfig.json',
-	'sagemaker-extension/tsconfig.json',
 	'simple-browser/tsconfig.json',
 	'tunnel-forwarding/tsconfig.json',
 	'typescript-language-features/test-workspace/tsconfig.json',

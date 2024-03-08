@@ -168,9 +168,7 @@ class RemoteAuthoritiesImpl {
 		return URI.from({
 			scheme: platform.isWeb ? this._preferredWebSchema : Schemas.vscodeRemoteResource,
 			authority: `${host}:${port}`,
-			path: platform.isWeb
-				? (window.location.pathname + "/" + this._remoteResourcesPath).replace(/\/\/+/g, "/")
-				: this._remoteResourcesPath,
+			path: this._remoteResourcesPath,
 			query
 		});
 	}

@@ -55,7 +55,6 @@ export type ExtensionVirtualWorkspaceSupport = {
 };
 
 export interface IProductConfiguration {
-	readonly rootEndpoint?: string
 	readonly version: string;
 	readonly date?: string;
 	readonly quality?: string;
