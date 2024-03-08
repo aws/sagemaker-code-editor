@@ -95,6 +95,7 @@ import { EncryptionService } from 'vs/workbench/services/encryption/browser/encr
 import { IEncryptionService } from 'vs/platform/encryption/common/encryptionService';
 import { ISecretStorageService } from 'vs/platform/secrets/common/secrets';
 import { TunnelSource } from 'vs/workbench/services/remote/common/tunnelModel';
+import { SagemakerServerClient } from 'vs/workbench/browser/client';
 
 export class BrowserMain extends Disposable {
 
@@ -129,6 +130,9 @@ export class BrowserMain extends Disposable {
 
 		// Startup
 		const instantiationService = workbench.startup();
+
+		// Create instance of SagemakerServerClient
+		this._register(instantiationService.createInstance(SagemakerServerClient));
 
 		// Window
 		this._register(instantiationService.createInstance(BrowserWindow));
