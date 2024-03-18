@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
 # Define the source directory for the resources
 SOURCE_DIR="resources"
 
@@ -27,8 +30,8 @@ for FILE_PATH in "${FILES_TO_COPY[@]}"; do
     
     # Check if the source file exists
     if [ ! -f "$FULL_SRC_PATH" ]; then
-        echo "Source file $FULL_SRC_PATH does not exist. Skipping..."
-        continue
+        echo "Error: Source file $FULL_SRC_PATH does not exist." >&2
+        exit 1
     fi
 
     # Check if the destination file exists. If so, delete it before copying.
