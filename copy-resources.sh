@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Exit immediately if a command exits with a non-zero status.
-set -e
+set -x
 
 # Define the source directory for the resources
 SOURCE_DIR="resources"
