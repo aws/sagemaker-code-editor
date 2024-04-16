@@ -100,7 +100,7 @@ Index: sagemaker-code-editor/vscode/product.json
  	"applicationName": "code-oss",
  	"dataFolderName": ".vscode-oss",
  	"win32MutexName": "vscodeoss",
-@@ -34,53 +34,17 @@
+@@ -34,52 +34,16 @@
  	"urlProtocol": "code-oss",
  	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
  	"builtInExtensions": [
@@ -165,9 +165,6 @@ Index: sagemaker-code-editor/vscode/product.json
 +	"linkProtectionTrustedDomains": [
 +		"https://open-vsx.org"
  	]
--}
-\ No newline at end of file
-+}
 Index: sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/product/common/product.ts
