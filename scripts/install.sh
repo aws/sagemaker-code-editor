@@ -1,5 +1,7 @@
 #!/bin/bash
-set -e
+
+# set +e to prevent quilt from exiting when no patches popped
+set +e
 
 # Set current project root
 PROJ_ROOT=$(pwd)
@@ -7,6 +9,9 @@ PROJ_ROOT=$(pwd)
 # Clean out patches
 printf "\n======== Cleaning out patches ========\n"
 quilt pop -a
+
+# re-enable -e to allow exiting on error
+set -e
 
 # make sure module is current
 printf "\n======== Updating submodule ========\n"
@@ -22,9 +27,17 @@ printf "\n======== Applying patches ========\n"
         exit 1
 }
 
+# Comment out breaking lines in postinstall.js
+printf "\n======== Comment out breaking git config lines in postinstall.js ========\n"
+sh ${PROJ_ROOT}/scripts/postinstall.sh
+
 # Copy resources
 printf "\n======== Copy resources ========\n"
 sh ${PROJ_ROOT}/scripts/copy-resources.sh
+
+# Delete node_modules to prevent node-gyp build error
+printf "\n======== Deleting vscode/node_modules ========\n"
+rm -rf /Users/spenceng/Github/sagemaker-code-editor-04-17/sagemaker-code-editor/vscode/node_modules
 
 # Build the project
 printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"

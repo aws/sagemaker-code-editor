@@ -16,6 +16,7 @@ This script will:
 - use `quilt` to pop any existing patches.
 - update the submodule to verify the local version is in parity with source
 - apply all patches with `quilt` from `./patches`
+- runs `./scripts/postinstall.sh` that will comment out 2 breaking `git config` lines from `./vscode/build/npm/postinstall.js`
 - runs `./scripts/copy-resource.sh` that will copy patched version of code - oss from `./vscode` into `./patched-vscode` folder along with icon(s) and svg(s) from `./resources` folder
 - runs `yarn install` and downloads built in extensions on patched submodule
 
