@@ -8,16 +8,16 @@ Whenever we create a new branch with `vscode` pointing to a specific commit, thi
 
 ## Patching Execution
 
-To properly patch, please follow instructions below:
+To properly patch, please run script:
 
-* After cloning the repo, run `git submodule init` and `git submodule update` to initialize the `vscode` submodule.
-* Use `quilt` to apply patches in sequence using `quilt push -a` from the root directory. 
-    - Install quilt on mac - `brew install quilt`
-* Copy resources with the shell script (also in the root directory) by running these commands:
-    - `chmod +x copy-resources.sh`
-    - `./copy-resources.sh`
+`sh ./scripts/install.sh`
 
-The above steps will result in changes being applied to the `vscode` folder.
+This script will:
+- use `quilt` to pop any existing patches.
+- update the submodule to verify the local version is in parity with source
+- apply all patches with `quilt` from `./patches`
+- runs `./scripts/copy-resource.sh` that will copy patched version of code - oss from `./vscode` into `./patched-vscode` folder along with icon(s) and svg(s) from `./resources` folder
+- runs `yarn install` and downloads built in extensions on patched submodule
 
 ## Troubleshooting and Feedback
 
