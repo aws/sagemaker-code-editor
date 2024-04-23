@@ -37,7 +37,7 @@ sh ${PROJ_ROOT}/scripts/copy-resources.sh
 
 # Delete node_modules to prevent node-gyp build error
 printf "\n======== Deleting vscode/node_modules ========\n"
-rm -rf /Users/spenceng/Github/sagemaker-code-editor-04-17/sagemaker-code-editor/vscode/node_modules
+rm -rf "${PROJ_ROOT}/vscode/node_modules"
 
 # Build the project
 printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
