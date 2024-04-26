@@ -53,6 +53,22 @@ opensource-codeofconduct@amazon.com with any additional questions or comments.
 ## Security issue notifications
 If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
 
+[Source](https://raphaelhertzog.com/2012/08/08/how-to-use-quilt-to-manage-patches-in-debian-packages/)
+
+### Patching Code
+
+0. You can go through the patch stack with `quilt push` and `quilt pop`.
+1. Create a new patch (`quilt new {name}.diff`) or use an existing patch.
+1. Add the file(s) you are patching (`quilt add [-P patch] {file}`). A file
+   **must** be added before you make changes to it.
+1. Make your changes. Patches do not need to be independent of each other but
+   each patch must result in a working sagemaker-code-editor without any broken in-between
+   states otherwise they are difficult to test and modify.
+1. Add your changes to the patch (`quilt refresh`)
+1. Add a comment in the patch about the reason for the patch and how to
+   reproduce the behavior it fixes or adds. Every patch should have an e2e test
+   as well.
+
 
 ## Licensing
 
