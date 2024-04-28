@@ -152,7 +152,7 @@ jobs:
         shell: bash
 
   build:
-    name: Build code-server
+    name: Build code-editor
     runs-on: ubuntu-20.04
     timeout-minutes: 60
     steps:
@@ -188,15 +188,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: "**/node_modules"
-          key: yarn-build-code-server-${{ hashFiles('**/yarn.lock') }}
+          key: yarn-build-code-editor-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            yarn-build-code-server-
+            yarn-build-code-editor-
 
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: yarn --frozen-lockfile
 
-      - name: Build code-server
+      - name: Build code-editor
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: yarn build
@@ -208,7 +208,7 @@ jobs:
         run: echo "rev=$(git rev-parse HEAD:./lib/vscode)" >> $GITHUB_OUTPUT
 
       # We need to rebuild when we have a new version of Code, when any of
-      # the patches changed, or when the code-server version changes (since
+      # the patches changed, or when the code-editor version changes (since
       # it gets embedded into the code).  Use VSCODE_CACHE_VERSION to
       # force a rebuild.
       - name: Fetch prebuilt Code package from cache
