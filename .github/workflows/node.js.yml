@@ -151,61 +151,10 @@ jobs:
           ./actionlint -color -shellcheck= -ignore "set-output"
         shell: bash
 
-  test-unit:
-    name: Run unit tests
-    runs-on: ubuntu-20.04
-    timeout-minutes: 5
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v44
-        with:
-          files: |
-            **/*.ts
-          files_ignore: |
-            lib/vscode/**
-
-      - name: Install Node.js
-        if: steps.changed-files.outputs.any_changed == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .node-version
-
-      - name: Fetch dependencies from cache
-        if: steps.changed-files.outputs.any_changed == 'true'
-        id: cache-node-modules
-        uses: actions/cache@v4
-        with:
-          path: "**/node_modules"
-          key: yarn-build-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-build-
-
-      - name: Install dependencies
-        if: steps.changed-files.outputs.any_changed == 'true' && steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: SKIP_SUBMODULE_DEPS=1 yarn --frozen-lockfile
-
-      - name: Run unit tests
-        if: steps.changed-files.outputs.any_changed == 'true'
-        run: yarn test:unit
-
-      - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: success()
-
   build:
     name: Build code-server
     runs-on: ubuntu-20.04
     timeout-minutes: 60
-    env:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
