@@ -196,16 +196,11 @@ jobs:
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: yarn --frozen-lockfile
 
-      - name: Build code-editor
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: yarn build
-
       # Get Code's git hash.  When this changes it means the content is
       # different and we need to rebuild.
-      - name: Get latest lib/vscode rev
+      - name: Get latest vscode rev
         id: vscode-rev
-        run: echo "rev=$(git rev-parse HEAD:./lib/vscode)" >> $GITHUB_OUTPUT
+        run: echo "rev=$(git rev-parse HEAD:./vscode)" >> $GITHUB_OUTPUT
 
       # We need to rebuild when we have a new version of Code, when any of
       # the patches changed, or when the code-editor version changes (since
@@ -218,11 +213,8 @@ jobs:
           path: lib/vscode-reh-web-*
           key: vscode-reh-package-${{ secrets.VSCODE_CACHE_VERSION }}-${{ steps.vscode-rev.outputs.rev }}-${{ hashFiles('patches/*.diff', 'ci/build/build-vscode.sh') }}
 
-      - name: Build vscode
-        env:
-          VERSION: "0.0.0"
-        if: steps.cache-vscode.outputs.cache-hit != 'true'
-        run: yarn build:vscode
+      - name: Build code-editor
+        run: yarn build
 
       # The release package does not contain any native modules
       # and is neutral to architecture/os/libc version.
