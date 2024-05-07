@@ -45,7 +45,7 @@ function showWarningDialog() {
                         }
                     });
 
-            } else {
+            } else if (getExpiryTime(sagemakerCookie) == -1 || remainingTime <=0) {
                 // this means expiryTime cookie is either invalid or <0
                 signInError(sagemakerCookie);
             }
