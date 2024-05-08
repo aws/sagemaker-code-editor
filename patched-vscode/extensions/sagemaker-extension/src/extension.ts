@@ -71,19 +71,21 @@ function initialize(sagemakerCookie: SagemakerCookie) {
     const currentTime = Date.now();
     const timeToExpiry = getExpiryTime(sagemakerCookie) - currentTime;
 
-    if (timeToExpiry <= 0) {
-        signInError(sagemakerCookie);
-    } else if (timeToExpiry >= FIFTEEN_MINUTES_INTERVAL_MILLIS) {
-        const warningTime = timeToExpiry - FIFTEEN_MINUTES_INTERVAL_MILLIS;
-        setTimeout(() => {
-            showWarningDialog();
-        }, warningTime);
-    } else {
-        // If less than or equal to 15 minutes left, set a timer for the remaining time
-        const warningTime = timeToExpiry % FIVE_MINUTES_INTERVAL_MILLIS;
-        setTimeout(() => {
-            showWarningDialog();
-        }, warningTime);
+    if (getExpiryTime(sagemakerCookie) !== -1) {
+        if (timeToExpiry <= 0) {
+            signInError(sagemakerCookie);
+        } else if (timeToExpiry >= FIFTEEN_MINUTES_INTERVAL_MILLIS) {
+            const warningTime = timeToExpiry - FIFTEEN_MINUTES_INTERVAL_MILLIS;
+            setTimeout(() => {
+                showWarningDialog();
+            }, warningTime);
+        } else {
+            // If less than or equal to 15 minutes left, set a timer for the remaining time
+            const warningTime = timeToExpiry % FIVE_MINUTES_INTERVAL_MILLIS;
+            setTimeout(() => {
+                showWarningDialog();
+            }, warningTime);
+        }
     }
 }
 
