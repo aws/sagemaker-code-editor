@@ -11,6 +11,7 @@
     "scripts": {
       "clean": "./ci/build/clean.sh",
       "build": "./ci/build/build-code-editor.sh",
+      "compile": "yarn --cwd vscode compile",
       "install": "yarn --cwd vscode install --frozen-lockfile",
       "build:vscode": "./ci/build/build-vscode.sh",
       "patch": "./ci/build/patch.sh",
