@@ -12,8 +12,11 @@ import { DetailedLineRangeMapping } from 'vs/editor/common/diff/rangeMapping';
 import { LegacyLinesDiffComputer } from 'vs/editor/common/diff/legacyLinesDiffComputer';
 import { DefaultLinesDiffComputer } from 'vs/editor/common/diff/defaultLinesDiffComputer/defaultLinesDiffComputer';
 import { Range } from 'vs/editor/common/core/range';
+import { ensureNoDisposablesAreLeakedInTestSuite } from 'vs/base/test/common/utils';
 
 suite('diffing fixtures', () => {
+	ensureNoDisposablesAreLeakedInTestSuite();
+
 	setup(() => {
 		setUnexpectedErrorHandler(e => {
 			throw e;
@@ -42,7 +45,7 @@ suite('diffing fixtures', () => {
 		const diffingAlgo = diffingAlgoName === 'legacy' ? new LegacyLinesDiffComputer() : new DefaultLinesDiffComputer();
 
 		const ignoreTrimWhitespace = folder.indexOf('trimws') >= 0;
-		const diff = diffingAlgo.computeDiff(firstContentLines, secondContentLines, { ignoreTrimWhitespace, maxComputationTimeMs: Number.MAX_SAFE_INTEGER, computeMoves: false });
+		const diff = diffingAlgo.computeDiff(firstContentLines, secondContentLines, { ignoreTrimWhitespace, maxComputationTimeMs: Number.MAX_SAFE_INTEGER, computeMoves: true });
 
 		function getDiffs(changes: readonly DetailedLineRangeMapping[]): IDetailedDiff[] {
 			return changes.map<IDetailedDiff>(c => ({
@@ -120,7 +123,7 @@ suite('diffing fixtures', () => {
 	}
 
 	test(`test`, () => {
-		runTest('invalid-diff-trimws', 'advanced');
+		runTest('shifting-twice', 'advanced');
 	});
 
 	for (const folder of folders) {
@@ -155,5 +158,5 @@ interface IMoveInfo {
 	originalRange: string; // [startLineNumber, endLineNumberExclusive)
 	modifiedRange: string; // [startLineNumber, endLineNumberExclusive)
 
-	changes?: IDetailedDiff[];
+	changes: IDetailedDiff[];
 }

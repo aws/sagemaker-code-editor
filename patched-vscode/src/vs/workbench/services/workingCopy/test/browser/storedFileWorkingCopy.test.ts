@@ -19,6 +19,7 @@ import { Promises, timeout } from 'vs/base/common/async';
 import { consumeReadable, consumeStream, isReadableStream } from 'vs/base/common/stream';
 import { runWithFakedTimers } from 'vs/base/test/common/timeTravelScheduler';
 import { ensureNoDisposablesAreLeakedInTestSuite } from 'vs/base/test/common/utils';
+import { SnapshotContext } from 'vs/workbench/services/workingCopy/common/fileWorkingCopy';
 
 export class TestStoredFileWorkingCopyModel extends Disposable implements IStoredFileWorkingCopyModel {
 
@@ -45,7 +46,7 @@ export class TestStoredFileWorkingCopyModel extends Disposable implements IStore
 		this.throwOnSnapshot = true;
 	}
 
-	async snapshot(token: CancellationToken): Promise<VSBufferReadableStream> {
+	async snapshot(context: SnapshotContext, token: CancellationToken): Promise<VSBufferReadableStream> {
 		if (this.throwOnSnapshot) {
 			throw new Error('Fail');
 		}
@@ -87,10 +88,19 @@ export class TestStoredFileWorkingCopyModelWithCustomSave extends TestStoredFile
 
 	saveCounter = 0;
 	throwOnSave = false;
+	saveOperation: Promise<void> | undefined = undefined;
 
 	async save(options: IWriteFileOptions, token: CancellationToken): Promise<IFileStatWithMetadata> {
 		if (this.throwOnSave) {
 			throw new Error('Fail');
+		}
+
+		if (this.saveOperation) {
+			await this.saveOperation;
+		}
+
+		if (token.isCancellationRequested) {
+			throw new Error('Canceled');
 		}
 
 		this.saveCounter++;
@@ -187,6 +197,42 @@ suite('StoredFileWorkingCopy (with custom save)', function () {
 
 		assert.strictEqual(saveErrorCounter, 1);
 		assert.strictEqual(workingCopy.hasState(StoredFileWorkingCopyState.ERROR), true);
+	});
+
+	test('save cancelled (custom implemented)', async () => {
+		let savedCounter = 0;
+		let lastSaveEvent: IStoredFileWorkingCopySaveEvent | undefined = undefined;
+		disposables.add(workingCopy.onDidSave(e => {
+			savedCounter++;
+			lastSaveEvent = e;
+		}));
+
+		let saveErrorCounter = 0;
+		disposables.add(workingCopy.onDidSaveError(() => {
+			saveErrorCounter++;
+		}));
+
+		await workingCopy.resolve();
+		let resolve: () => void;
+		(workingCopy.model as TestStoredFileWorkingCopyModelWithCustomSave).saveOperation = new Promise(r => resolve = r);
+
+		workingCopy.model?.updateContents('first');
+		const firstSave = workingCopy.save();
+		// cancel the first save by requesting a second while it is still mid operation
+		workingCopy.model?.updateContents('second');
+		const secondSave = workingCopy.save();
+		resolve!();
+		await firstSave;
+		await secondSave;
+
+		assert.strictEqual(savedCounter, 1);
+		assert.strictEqual(saveErrorCounter, 0);
+		assert.strictEqual(workingCopy.isDirty(), false);
+		assert.strictEqual(lastSaveEvent!.reason, SaveReason.EXPLICIT);
+		assert.ok(lastSaveEvent!.stat);
+		assert.ok(isStoredFileWorkingCopySaveEvent(lastSaveEvent!));
+		assert.strictEqual(workingCopy.model?.pushedStackElement, true);
+		assert.strictEqual((workingCopy.model as TestStoredFileWorkingCopyModelWithCustomSave).saveCounter, 1);
 	});
 
 	ensureNoDisposablesAreLeakedInTestSuite();
@@ -599,8 +645,8 @@ suite('StoredFileWorkingCopy', function () {
 		assert.strictEqual(savedCounter, 1);
 		assert.strictEqual(saveErrorCounter, 0);
 		assert.strictEqual(workingCopy.isDirty(), false);
-		assert.strictEqual((lastSaveEvent! as IStoredFileWorkingCopySaveEvent).reason, SaveReason.AUTO);
-		assert.strictEqual((lastSaveEvent! as IStoredFileWorkingCopySaveEvent).source, source);
+		assert.strictEqual(lastSaveEvent!.reason, SaveReason.AUTO);
+		assert.strictEqual(lastSaveEvent!.source, source);
 	});
 
 	test('save (no errors) - multiple', async () => {
@@ -879,11 +925,12 @@ suite('StoredFileWorkingCopy', function () {
 	});
 
 	async function testSaveFromSaveParticipant(workingCopy: StoredFileWorkingCopy<TestStoredFileWorkingCopyModel>, async: boolean): Promise<void> {
-
+		const from = URI.file('testFrom');
 		assert.strictEqual(accessor.workingCopyFileService.hasSaveParticipants, false);
 
 		const disposable = accessor.workingCopyFileService.addSaveParticipant({
-			participate: async () => {
+			participate: async (wc, context) => {
+
 				if (async) {
 					await timeout(10);
 				}
@@ -894,10 +941,39 @@ suite('StoredFileWorkingCopy', function () {
 
 		assert.strictEqual(accessor.workingCopyFileService.hasSaveParticipants, true);
 
-		await workingCopy.save({ force: true });
+		await workingCopy.save({ force: true, from });
 
 		disposable.dispose();
 	}
+
+	test('Save Participant carries context', async function () {
+		await workingCopy.resolve();
+
+		const from = URI.file('testFrom');
+		assert.strictEqual(accessor.workingCopyFileService.hasSaveParticipants, false);
+
+		let e: Error | undefined = undefined;
+		const disposable = accessor.workingCopyFileService.addSaveParticipant({
+			participate: async (wc, context) => {
+				try {
+					assert.strictEqual(context.reason, SaveReason.EXPLICIT);
+					assert.strictEqual(context.savedFrom?.toString(), from.toString());
+				} catch (error) {
+					e = error;
+				}
+			}
+		});
+
+		assert.strictEqual(accessor.workingCopyFileService.hasSaveParticipants, true);
+
+		await workingCopy.save({ force: true, from });
+
+		if (e) {
+			throw e;
+		}
+
+		disposable.dispose();
+	});
 
 	test('revert', async () => {
 		await workingCopy.resolve();

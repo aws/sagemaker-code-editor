@@ -18,6 +18,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { BaseAssignmentService } from 'vs/platform/assignment/common/assignmentService';
 import { workbenchConfigurationNodeBase } from 'vs/workbench/common/configuration';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions, ConfigurationScope } from 'vs/platform/configuration/common/configurationRegistry';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 
 export const IWorkbenchAssignmentService = createDecorator<IWorkbenchAssignmentService>('WorkbenchAssignmentService');
 
@@ -84,13 +85,15 @@ export class WorkbenchAssignmentService extends BaseAssignmentService {
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IStorageService storageService: IStorageService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IProductService productService: IProductService
+		@IProductService productService: IProductService,
+		@IEnvironmentService environmentService: IEnvironmentService
 	) {
 
 		super(
 			telemetryService.machineId,
 			configurationService,
 			productService,
+			environmentService,
 			new WorkbenchAssignmentServiceTelemetry(telemetryService, productService),
 			new MementoKeyValueStorage(new Memento('experiment.service.memento', storageService))
 		);
@@ -143,7 +146,7 @@ registry.registerConfiguration({
 		'workbench.enableExperiments': {
 			'type': 'boolean',
 			'description': localize('workbench.enableExperiments', "Fetches experiments to run from a Microsoft online service."),
-			'default': false,
+			'default': true,
 			'scope': ConfigurationScope.APPLICATION,
 			'restricted': true,
 			'tags': ['usesOnlineServices']

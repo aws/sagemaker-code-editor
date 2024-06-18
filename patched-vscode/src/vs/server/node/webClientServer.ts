@@ -28,16 +28,15 @@ import { streamToBuffer } from 'vs/base/common/buffer';
 import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
 import { CharCode } from 'vs/base/common/charCode';
-import { getRemoteServerRootPath } from 'vs/platform/remote/common/remoteHosts';
 import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
 
-const textMimeType = {
+const textMimeType: { [ext: string]: string | undefined } = {
 	'.html': 'text/html',
 	'.js': 'text/javascript',
 	'.json': 'application/json',
 	'.css': 'text/css',
 	'.svg': 'image/svg+xml',
-} as { [ext: string]: string | undefined };
+};
 
 /**
  * Return an error to the client.
@@ -104,13 +103,15 @@ export class WebClientServer {
 
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
+		private readonly _basePath: string,
+		readonly serverRootPath: string,
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
 		@IProductService private readonly _productService: IProductService,
 	) {
 		this._webExtensionResourceUrlTemplate = this._productService.extensionsGallery?.resourceUrlTemplate ? URI.parse(this._productService.extensionsGallery.resourceUrlTemplate) : undefined;
-		const serverRootPath = getRemoteServerRootPath(_productService);
+
 		this._staticRoute = `${serverRootPath}/static`;
 		this._callbackRoute = `${serverRootPath}/callback`;
 		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
@@ -128,7 +129,7 @@ export class WebClientServer {
 			if (pathname.startsWith(this._staticRoute) && pathname.charCodeAt(this._staticRoute.length) === CharCode.Slash) {
 				return this._handleStatic(req, res, parsedUrl);
 			}
-			if (pathname === '/') {
+			if (pathname === this._basePath) {
 				return this._handleRoot(req, res, parsedUrl);
 			}
 			if (pathname === this._callbackRoute) {
@@ -262,7 +263,7 @@ export class WebClientServer {
 					newQuery[key] = parsedUrl.query[key];
 				}
 			}
-			const newLocation = url.format({ pathname: '/', query: newQuery });
+			const newLocation = url.format({ pathname: parsedUrl.pathname, query: newQuery });
 			responseHeaders['Location'] = newLocation;
 
 			res.writeHead(302, responseHeaders);
@@ -278,7 +279,7 @@ export class WebClientServer {
 		const remoteAuthority = (
 			useTestResolver
 				? 'test+test'
-				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host || window.location.host)
+				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host)
 		);
 		if (!remoteAuthority) {
 			return serveError(req, res, 400, `Bad request.`);
@@ -305,22 +306,17 @@ export class WebClientServer {
 			scopes: [['user:email'], ['repo']]
 		} : undefined;
 
-		const basePath: string = this._environmentService.args['base-path'] || "/"
-		const base = relativeRoot(basePath)
-		const vscodeBase = relativePath(basePath)
-
-		const productConfiguration = <Partial<IProductConfiguration>>{
-			rootEndpoint: base,
+		const productConfiguration = {
 			embedderIdentifier: 'server-distro',
-			extensionsGallery: this._webExtensionResourceUrlTemplate ? {
+			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
 				...this._productService.extensionsGallery,
-				'resourceUrlTemplate': this._webExtensionResourceUrlTemplate.with({
+				resourceUrlTemplate: this._webExtensionResourceUrlTemplate.with({
 					scheme: 'http',
 					authority: remoteAuthority,
 					path: `${this._webExtensionRoute}/${this._webExtensionResourceUrlTemplate.authority}${this._webExtensionResourceUrlTemplate.path}`
 				}).toString(true)
 			} : undefined
-		};
+		} satisfies Partial<IProductConfiguration>;
 
 		if (!this._environmentService.isBuilt) {
 			try {
@@ -331,8 +327,7 @@ export class WebClientServer {
 
 		const workbenchWebConfiguration = {
 			remoteAuthority,
-			webviewEndpoint: vscodeBase + this._staticRoute + '/out/vs/workbench/contrib/webview/browser/pre',
-			userDataPath: this._environmentService.userDataPath,
+			serverBasePath: this._basePath,
 			_wrapWebWorkerExtHostInIframe,
 			developmentOptions: { enableSmokeTestDriver: this._environmentService.args['enable-smoke-test-driver'] ? true : undefined, logLevel: this._logService.getLevel() },
 			settingsSyncOptions: !this._environmentService.isBuilt && this._environmentService.args['enable-sync'] ? { enabled: true } : undefined,
@@ -347,10 +342,8 @@ export class WebClientServer {
 		const values: { [key: string]: string } = {
 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
 			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
-			WORKBENCH_WEB_BASE_URL: vscodeBase + this._staticRoute,
-			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
-			BASE: base,
-			VS_BASE: vscodeBase,
+			WORKBENCH_WEB_BASE_URL: this._staticRoute,
+			WORKBENCH_NLS_BASE_URL: nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : '',
 		};
 
 		if (useTestResolver) {
@@ -371,11 +364,13 @@ export class WebClientServer {
 			return void res.end('Not found');
 		}
 
+		const webWorkerExtensionHostIframeScriptSHA = 'sha256-75NYUUvf+5++1WbfCZOV3PSWxBhONpaxwx+mkOFRv/Y=';
+
 		const cspDirectives = [
 			'default-src \'self\';',
 			'img-src \'self\' https: data: blob:;',
 			'media-src \'self\';',
-			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-fh3TwPMflhsEIpR8g1OYTIMVWhXTLcjQ9kh2tIpmv54=' ${useTestResolver ? '' : `http://${remoteAuthority}`};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
+			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} '${webWorkerExtensionHostIframeScriptSHA}' ${useTestResolver ? '' : `http://${remoteAuthority}`};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
 			'child-src \'self\';',
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
@@ -447,61 +442,4 @@ export class WebClientServer {
 		});
 		return void res.end(data);
 	}
-}
-
-
-/**
- * Remove extra slashes in a URL.
- *
- * This is meant to fill the job of `path.join` so you can concatenate paths and
- * then normalize out any extra slashes.
- *
- * If you are using `path.join` you do not need this but note that `path` is for
- * file system paths, not URLs.
- */
-export const normalizeUrlPath = (url: string, keepTrailing = false): string => {
-	return url.replace(/\/\/+/g, "/").replace(/\/+$/, keepTrailing ? "/" : "")
-}
-
-/**
- * Get the relative path that will get us to the root of the page. For each
- * slash we need to go up a directory.  Will not have a trailing slash.
- *
- * For example:
- *
- * / => .
- * /foo => .
- * /foo/ => ./..
- * /foo/bar => ./..
- * /foo/bar/ => ./../..
- *
- * All paths must be relative in order to work behind a reverse proxy since we
- * we do not know the base path.  Anything that needs to be absolute (for
- * example cookies) must get the base path from the frontend.
- *
- * All relative paths must be prefixed with the relative root to ensure they
- * work no matter the depth at which they happen to appear.
- *
- * For Express `req.originalUrl` should be used as they remove the base from the
- * standard `url` property making it impossible to get the true depth.
- */
-export const relativeRoot = (originalUrl: string): string => {
-	const depth = (originalUrl.split("?", 1)[0].match(/\//g) || []).length
-	return normalizeUrlPath("./" + (depth > 1 ? "../".repeat(depth - 1) : ""))
-}
-
-/**
- * Get the relative path to the current resource.
- *
- * For example:
- *
- * / => .
- * /foo => ./foo
- * /foo/ => .
- * /foo/bar => ./bar
- * /foo/bar/ => .
- */
-export const relativePath = (originalUrl: string): string => {
-	const parts = originalUrl.split("?", 1)[0].split("/")
-	return normalizeUrlPath("./" + parts[parts.length - 1])
 }
