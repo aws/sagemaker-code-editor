@@ -18,8 +18,8 @@ export interface IAppInsightsCore {
 	unload(isAsync: boolean, unloadComplete: (unloadState: ITelemetryUnloadState) => void): void;
 }
 
-const endpointUrl = 'https://0.0.0.0/OneCollector/1.0';
-const endpointHealthUrl = 'https://0.0.0.0/ping';
+const endpointUrl = 'https://mobile.events.data.microsoft.com/OneCollector/1.0';
+const endpointHealthUrl = 'https://mobile.events.data.microsoft.com/ping';
 
 async function getClient(instrumentationKey: string, addInternalFlag?: boolean, xhrOverride?: IXHROverride): Promise<IAppInsightsCore> {
 	const oneDs = await importAMDNodeModule<typeof import('@microsoft/1ds-core-js')>('@microsoft/1ds-core-js', 'dist/ms.core.js');
@@ -45,6 +45,7 @@ async function getClient(instrumentationKey: string, addInternalFlag?: boolean, 
 		// Configure the channel to use a XHR Request override since it's not available in node
 		const channelConfig: IChannelConfiguration = {
 			alwaysUseXhrOverride: true,
+			ignoreMc1Ms0CookieProcessing: true,
 			httpXHROverride: xhrOverride
 		};
 		coreConfig.extensionConfig[collectorChannelPlugin.identifier] = channelConfig;
@@ -53,8 +54,12 @@ async function getClient(instrumentationKey: string, addInternalFlag?: boolean, 
 	appInsightsCore.initialize(coreConfig, []);
 
 	appInsightsCore.addTelemetryInitializer((envelope) => {
+		// Opt the user out of 1DS data sharing
+		envelope['ext'] = envelope['ext'] ?? {};
+		envelope['ext']['web'] = envelope['ext']['web'] ?? {};
+		envelope['ext']['web']['consentDetails'] = '{"GPC_DataSharingOptIn":false}';
+
 		if (addInternalFlag) {
-			envelope['ext'] = envelope['ext'] ?? {};
 			envelope['ext']['utc'] = envelope['ext']['utc'] ?? {};
 			// Sets it to be internal only based on Windows UTC flagging
 			envelope['ext']['utc']['flags'] = 0x0000811ECD;
