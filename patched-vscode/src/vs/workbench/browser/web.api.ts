@@ -298,6 +298,11 @@ export interface IWorkbenchConstructionOptions {
 	 */
 	readonly configurationDefaults?: Record<string, any>;
 
+	/**
+	 * Path to the user data directory.
+	 */
+	readonly userDataPath?: string
+
 	//#endregion
 
 	//#region Profile options

@@ -59,15 +59,17 @@ else {
 	if (Object.keys(product).length === 0) {
 		Object.assign(product, {
 			version: '1.90.0-dev',
-			nameShort: 'Code - OSS Dev',
-			nameLong: 'Code - OSS Dev',
+			nameShort: 'CodeEditor',
+			nameLong: 'Code Editor',
 			applicationName: 'code-oss',
 			dataFolderName: '.vscode-oss',
+			commit: "hellocommit",
+			date: "hellodate",
 			urlProtocol: 'code-oss',
 			reportIssueUrl: 'https://github.com/microsoft/vscode/issues/new',
 			licenseName: 'MIT',
 			licenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
-			serverLicenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt'
+			serverLicenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
 		});
 	}
 }
