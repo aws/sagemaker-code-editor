@@ -65,18 +65,40 @@ Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.ts
  	}
  
  	private startListening(): void {
+ @@ -550,17 +551,6 @@ class WorkspaceProvider implements IWork
+  	}
+  }
+
+ -function readCookie(name: string): string | undefined {
+ -	const cookies = document.cookie.split('; ');
+ -	for (const cookie of cookies) {
+ -		if (cookie.startsWith(name + '=')) {
+ -			return cookie.substring(name.length + 1);
+ -		}
+ -	}
+ -
+ -	return undefined;
+ -}
+ -
+  (function () {
+
+  	// Find config by checking for DOM
+ @@ -569,8 +559,8 @@ function readCookie(name: string): strin
+  	if (!configElement || !configElementAttribute) {
+  		throw new Error('Missing web configuration element');
+  	}
+ -	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents; workspaceUri?: UriComponents; callbackRoute: string } = JSON.parse(configElementAttribute);
+ -	const secretStorageKeyPath = readCookie('vscode-secret-key-path');
+ +	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents; workspaceUri?: UriComponents; callbackRoute: string } = { ...JSON.parse(configElementAttribute), remoteAuthority: location.host }
+ +	const secretStorageKeyPath = (window.location.pathname + "/mint-key").replace(/\/\/+/g, "/");
+  	const secretStorageCrypto = secretStorageKeyPath && ServerKeyedAESCrypto.supported()
+  		? new ServerKeyedAESCrypto(secretStorageKeyPath) : new TransparentCrypto();
+
+
 Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
-@@ -16,7 +16,6 @@ import { getServiceMachineId } from 'vs/
- import { IStorageService } from 'vs/platform/storage/common/storage';
- import { TelemetryLevel } from 'vs/platform/telemetry/common/telemetry';
- import { getTelemetryLevel, supportsTelemetry } from 'vs/platform/telemetry/common/telemetryUtils';
--import { RemoteAuthorities } from 'vs/base/common/network';
- import { TargetPlatform } from 'vs/platform/extensions/common/extensions';
- 
- const WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT = '/web-extension-resource/';
 @@ -99,7 +98,7 @@ export abstract class AbstractExtensionR
  					: version,
  				path: 'extension'
@@ -102,39 +124,29 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -270,16 +270,15 @@ export class WebClientServer {
- 			return void res.end();
- 		}
- 
--		const getFirstHeader = (headerName: string) => {
--			const val = req.headers[headerName];
--			return Array.isArray(val) ? val[0] : val;
--		};
--
- 		const useTestResolver = (!this._environmentService.isBuilt && this._environmentService.args['use-test-resolver']);
-+		// For now we are getting the remote authority from the client to avoid
-+		// needing specific configuration for reverse proxies to work.  Set this to
-+		// something invalid to make sure we catch code that is using this value
-+		// from the backend when it should not.
+@@ -278,7 +278,7 @@ export class WebClientServer {
  		const remoteAuthority = (
  			useTestResolver
  				? 'test+test'
 -				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host)
-+				: 'remote'
++				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host || window.location.host)
  		);
  		if (!remoteAuthority) {
  			return serveError(req, res, 400, `Bad request.`);
-@@ -306,6 +305,9 @@ export class WebClientServer {
+@@ -305,7 +305,12 @@ export class WebClientServer {
  			scopes: [['user:email'], ['repo']]
  		} : undefined;
- 
-+		const base = relativeRoot(getOriginalUrl(req))
-+		const vscodeBase = relativePath(getOriginalUrl(req))
+
++		const basePath: string = this._environmentService.args['server-base-path'] || "/"
++		const base = relativeRoot(basePath)
++		const vscodeBase = relativePath(basePath)
 +
  		const productConfiguration = {
++			rootEndpoint: base,
  			embedderIdentifier: 'server-distro',
  			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
-@@ -342,8 +344,10 @@ export class WebClientServer {
+ 				...this._productService.extensionsGallery,
+@@ -340,8 +345,10 @@ export class WebClientServer {
  		const values: { [key: string]: string } = {
  			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
  			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
@@ -147,11 +159,10 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  		};
  
  		if (useTestResolver) {
-@@ -443,3 +447,60 @@ export class WebClientServer {
+@@ -443,3 +445,70 @@ export class WebClientServer {
  		return void res.end(data);
  	}
  }
-+
 +
 +/**
 + * Remove extra slashes in a URL.
@@ -207,6 +218,17 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 +export const relativePath = (originalUrl: string): string => {
 +	const parts = originalUrl.split("?", 1)[0].split("/")
 +	return normalizeUrlPath("./" + parts[parts.length - 1])
++}
++
++/**
++ * code-server serves Code using Express.  Express removes the base from the url
++ * and puts the original in `originalUrl` so we must use this to get the correct
++ * depth.  Code is not aware it is behind Express so the types do not match.  We
++ * may want to continue moving code into Code and eventually remove the Express
++ * wrapper or move the web server back into code-server.
++ */
++export const getOriginalUrl = (req: http.IncomingMessage): string => {
++	return (req as any).originalUrl || req.url
 +}
 Index: sagemaker-code-editor/vscode/src/vs/server/node/serverEnvironmentService.ts
 ===================================================================
