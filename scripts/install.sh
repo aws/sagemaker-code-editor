@@ -10,6 +10,10 @@ PROJ_ROOT=$(pwd)
 printf "\n======== Cleaning out patches ========\n"
 quilt pop -a
 
+# empty vscode module
+printf "\n======== Delete data is vs code module if present ========\n"
+rm -rf ${PROJ_ROOT}/vscode/.
+
 # re-enable -e to allow exiting on error
 set -e
 
@@ -31,6 +35,10 @@ printf "\n======== Applying patches ========\n"
 printf "\n======== Comment out breaking git config lines in postinstall.js ========\n"
 sh ${PROJ_ROOT}/scripts/postinstall.sh
 
+# Build tarball for conda feedstock from vscode dir
+printf "\n======== Build Tarball for Conda Feedstock ========\n"
+bash ${PROJ_ROOT}/scripts/create_code_editor_tarball.sh -v 1.2.0
+
 # Copy resources
 printf "\n======== Copy resources ========\n"
 sh ${PROJ_ROOT}/scripts/copy-resources.sh
@@ -40,6 +48,6 @@ printf "\n======== Deleting vscode/node_modules ========\n"
 rm -rf "${PROJ_ROOT}/vscode/node_modules"
 
 # Build the project
-printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
+#printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
 yarn --cwd "${PROJ_ROOT}/vscode" install --pure-lockfile --verbose
 yarn --cwd "${PROJ_ROOT}/vscode" download-builtin-extensions
