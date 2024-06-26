@@ -147,13 +147,13 @@ export class CodeLensContribution implements IEditorContribution {
 			// no provider -> return but check with
 			// cached lenses. they expire after 30 seconds
 			if (cachedLenses) {
-				this._localToDispose.add(disposableTimeout(() => {
+				disposableTimeout(() => {
 					const cachedLensesNow = this._codeLensCache.get(model);
 					if (cachedLenses === cachedLensesNow) {
 						this._codeLensCache.delete(model);
 						this._onModelChange();
 					}
-				}, 30 * 1000));
+				}, 30 * 1000, this._localToDispose);
 			}
 			return;
 		}
@@ -229,7 +229,7 @@ export class CodeLensContribution implements IEditorContribution {
 			this._resolveCodeLensesPromise?.cancel();
 			this._resolveCodeLensesPromise = undefined;
 		}));
-		this._localToDispose.add(this._editor.onDidFocusEditorWidget(() => {
+		this._localToDispose.add(this._editor.onDidFocusEditorText(() => {
 			scheduler.schedule();
 		}));
 		this._localToDispose.add(this._editor.onDidBlurEditorText(() => {

@@ -293,18 +293,6 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/yarn.lock
 +# yarn lockfile v1
 +
 +
-Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
-===================================================================
---- sagemaker-code-editor.orig/vscode/build/gulpfile.extensions.js
-+++ sagemaker-code-editor/vscode/build/gulpfile.extensions.js
-@@ -63,6 +63,7 @@ const compilations = [
- 	'php-language-features/tsconfig.json',
- 	'search-result/tsconfig.json',
- 	'references-view/tsconfig.json',
-+	'sagemaker-extension/tsconfig.json',
- 	'simple-browser/tsconfig.json',
- 	'tunnel-forwarding/tsconfig.json',
- 	'typescript-language-features/test-workspace/tsconfig.json',
 Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
