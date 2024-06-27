@@ -9,6 +9,7 @@ PROJ_ROOT=$(pwd)
 # Clean out patches
 printf "\n======== Cleaning out patches ========\n"
 quilt pop -a
+rm -rf .pc
 
 # empty vscode module
 printf "\n======== Delete data is vs code module if present ========\n"
@@ -31,6 +32,15 @@ printf "\n======== Applying patches ========\n"
         exit 1
 }
 
+
+# Generate Licenses
+printf "\n======== Generate Licenses ========\n"
+cd ${PROJ_ROOT}/vscode
+cp LICENSE.txt LICENSE.vscode.txt
+cp ThirdPartyNotices.txt LICENSE-THIRD-PARTY.vscode.txt
+cp ../LICENSE-THIRD-PARTY .
+cd ${PROJ_ROOT}
+
 # Comment out breaking lines in postinstall.js
 printf "\n======== Comment out breaking git config lines in postinstall.js ========\n"
 sh ${PROJ_ROOT}/scripts/postinstall.sh
@@ -48,6 +58,6 @@ printf "\n======== Deleting vscode/node_modules ========\n"
 rm -rf "${PROJ_ROOT}/vscode/node_modules"
 
 # Build the project
-#printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
+printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
 yarn --cwd "${PROJ_ROOT}/vscode" install --pure-lockfile --verbose
 yarn --cwd "${PROJ_ROOT}/vscode" download-builtin-extensions
