@@ -69,7 +69,7 @@ fi
 
 # Run Code Editor UI tests
 printf "\n======== Running Code Editor UI tests ========\n"
-yarn --cwd "${PROJ_ROOT}/test/" cypress run --env RUN_LOCAL="${CYPRESS_ENV_VAR}"
+yarn --cwd "${PROJ_ROOT}/test/integ" cypress run --env RUN_LOCAL="${CYPRESS_ENV_VAR}"
 PASS_CODE_EDITOR_UI_TESTS=$([[ $? -eq 0 ]] && echo true || echo false)
 
 TEST_NAMES+=("Code Editor UI Tests")
