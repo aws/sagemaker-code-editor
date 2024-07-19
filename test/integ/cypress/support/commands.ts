@@ -1,35 +1,11 @@
-// ***********************************************
-// This example commands.js shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
 import 'cypress-wait-until';
-import { BACKGROUND, GENERIC_BUTTON } from './constants';
+import { BACKGROUND, DIALOG_BOX, GENERIC_BUTTON } from './constants';
 
 export const DEBUG: boolean = Cypress.env('DEBUG');
 export const RUN_LOCAL: boolean = Cypress.env('RUN_LOCAL');
 export const WEBSITE: string = Cypress.env('WEBSITE');
-// export const WEBSITE: string = 'https://google.com';
+
+let BASE_PATH: string = '';
 
 export function visitOSS() {
 	cy.visit(WEBSITE);
@@ -37,6 +13,8 @@ export function visitOSS() {
 	if (RUN_LOCAL) {
 		closeSignInDialog();
 	}
+
+        cy.wait(10_000);
 }
 
 export function openFolder(openedDirectories: Set<string>, path: string = ' ', useQuickInput: boolean = false) {
@@ -85,14 +63,26 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 	}
 
 	// Wait until the initial path is correct
-	// TODO: try getting initial path from `pwd` or something. maybe @asolidu
+        if (BASE_PATH == '') {
+                cy.wait(10_000);
+                cy.get(openFolderInputBox)
+                        .should('exist')
+                        .find('[class="input"]')
+                        .eq(0)
+                        .invoke('val')
+                        .then((text: string) => {
+                                BASE_PATH = text;
+                        });
+        }
+
 	cy.get(openFolderInputBox)
 		.should('exist')
 		.find('[class="input"]')
 		.eq(0)
 		.should(($input) => {
-			const inputValue = $input.val()
-			expect(inputValue).to.be.oneOf(['/home/sagemaker-user/', '/Users/donocl/'])
+			const inputValue = $input.val();
+                        expect(inputValue).to.equal(BASE_PATH);
+			// expect(inputValue).to.be.oneOf(['/home/sagemaker-user/', '/Users/donocl/'])
 		})
 
 	let absoluteFilePath: string = "";
@@ -142,7 +132,6 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 		cy.log('Have not previously opened this directory. Need to click \"Trust Authors');
 	}
 
-	
 	const dialogBox = '[class="monaco-dialog-box"]';
 	const dialogMessageBox = '[class="dialog-message-text"]';
 	const yesTrustAuthors = '[class="monaco-button monaco-text-button"][title="Yes, I trust the authors"]';
@@ -150,10 +139,18 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 	// Function to check if dialog box exists and is visible
 	const isDialogVisible = () => {
 		return cy.get('body').then($body => {
-			const $dialog = $body.find(dialogBox);
-			return $dialog.length > 0 && $dialog.is(':visible');
+			const dialog = $body.find(dialogBox);
+			if (dialog.length > 0 && dialog.is(':visible')) {
+                                const messageBox = dialog.find(dialogMessageBox);
+                                return messageBox.length > 0 && 
+                                       messageBox.is(':visible') && 
+                                       messageBox.text().includes('Do you trust the authors of the files in this folder?');
+                        } 
+                        return false;
 		});
 	};
+
+        cy.wait(3_000);
 
 	// Click to close the "Trust Authors" dialog box
 	cy.get(dialogBox, {timeout: 30_000})
@@ -193,16 +190,18 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 
 
 export function closeSignInDialog() {
-	const dialogBox = '[class="monaco-dialog-box"]';
+        const dialogMessageText = 'div[id="monaco-dialog-message-text"][class="dialog-message-text"]';
 	const okButton = GENERIC_BUTTON;
 	
-	// TODO: ensure the dialog box is actually the "please sign in" dialog
-	// TODO: make dialogbox a global constant
-	cy.get(dialogBox, {timeout: 30_000}).then((val) => {
+	cy.get(DIALOG_BOX, {timeout: 30_000}).then((val) => {
 		if (val.length > 0) {
-			cy.log('Dialog Box exists');
-			cy.log('Clicking OK to close dialog box');
-			cy.get(dialogBox).find(okButton).click().wait(1000);
+                        cy.get(DIALOG_BOX).find(dialogMessageText)
+                                .should('exist')
+                                .should('have.text', 'Please sign in again');
+			cy.log('Dialog Box exists. Clicking OK to close dialog box');
+                        cy.wait(3_000);                        
+			cy.get(DIALOG_BOX).find(okButton).click();
+                        cy.wait(3_000);
 		}
 	});
 }
@@ -225,9 +224,9 @@ export function createFile(filename: string) {
 
 
 export function execVSCodeQuickInput(command: string) {
-	cy.get(BACKGROUND).should('exist').type("{ctrl+shift+p}")
+        const inputBar = '[placeholder="Search files by name (append : to go to line or @ to go to symbol)"]';
 
-	const inputBar = '[placeholder="Search files by name (append : to go to line or @ to go to symbol)"]';
+	cy.get(BACKGROUND).should('exist').type("{ctrl+shift+p}");
 
 	cy.get(inputBar)
 		.should('exist')
@@ -242,10 +241,14 @@ export function typeInTerminal(command: string) {
 
 	cy.get(BACKGROUND)
 		.should('exist')
-		.type("{ctrl+shift+`}")
-		// .then();
+		.type("{ctrl+shift+`}");
+
+        cy.get('span[class*="codicon codicon-terminal"]', {timeout: 15_000});
+
+        cy.wait(3_000);
 
 	cy.get(TERMINAL, {timeout: 15_000})
 		.should('exist')
+                .eq(-1)
 		.type(`${command}{enter}`);
 }

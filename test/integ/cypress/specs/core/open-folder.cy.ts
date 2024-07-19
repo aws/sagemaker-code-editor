@@ -1,12 +1,16 @@
 import { openedDirectories } from "../../support/e2e";
-import { openFolder } from "../../support/commands";
-
+import { openFolder, typeInTerminal, execVSCodeQuickInput } from "../../support/commands";
 
 describe('Opens folder', () => {
   
 	it('opens folder', () => {
-		// TODO: make directory from terminal
+                // Create a directory
+                typeInTerminal('mkdir tmp && mkdir tmp/trash');
+                cy.wait(3_000);
+
+                execVSCodeQuickInput(">Terminal: Detach Session");
+
 		// Open a folder
-		openFolder(openedDirectories, 'code/trash', false);
+		openFolder(openedDirectories, 'tmp/trash/', false);
 	})
 })
