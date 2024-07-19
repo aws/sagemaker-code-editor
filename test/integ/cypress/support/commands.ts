@@ -1,82 +1,37 @@
-Cypress.on('uncaught:exception', (err, runnable) => {
-	// Handle the uncaught exception here
-	// You can choose to fail the test, log the error, or take any other action
-	// cy.log('Uncaught exception:', err);
+// ***********************************************
+// This example commands.js shows you how to
+// create various custom commands and overwrite
+// existing commands.
+//
+// For more comprehensive examples of custom
+// commands please read more here:
+// https://on.cypress.io/custom-commands
+// ***********************************************
+//
+//
+// -- This is a parent command --
+// Cypress.Commands.add('login', (email, password) => { ... })
+//
+//
+// -- This is a child command --
+// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
+//
+//
+// -- This is a dual command --
+// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
+//
+//
+// -- This will overwrite an existing command --
+// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
+import 'cypress-wait-until';
+import { BACKGROUND, GENERIC_BUTTON } from './constants';
 
-	// Return false to prevent Cypress from failing the test
-	return false;
-});
+export const DEBUG: boolean = Cypress.env('DEBUG');
+export const RUN_LOCAL: boolean = Cypress.env('RUN_LOCAL');
+export const WEBSITE: string = Cypress.env('WEBSITE');
+// export const WEBSITE: string = 'https://google.com';
 
-// This can be used to get a generic button
-const GENERIC_BUTTON = '[class="monaco-button monaco-text-button"]';
-const BACKGROUND = '[class="titlebar-container"]';
-
-const DEBUG: boolean = Cypress.env('DEBUG');
-const RUN_LOCAL: boolean = Cypress.env('RUN_LOCAL');
-const WEBSITE: string = Cypress.env('WEBSITE');
-
-// Open the website
-beforeEach(() => {
-	cy.log(`DEBUG=${DEBUG}`);
-	cy.log(`RUN_LOCAL=${RUN_LOCAL}`);
-	cy.log(`WEBSITE=${WEBSITE}`);
-	visitOSS();
-});
-
-describe('Opens Application', () => {
-
-	it('Opens Code Editor application', () => {
-	})
-})
-
-describe('Basic Functionality Tests', () => {
-  
-	it('opens folder', () => {
-		// TODO: make directory from terminal
-		// Open a folder
-		openFolder('code/trash', false);
-	})
-
-	it('executes command in terminal', () => {
-		// TODO: make directory from terminal
-		// Open a folder
-		openFolder('code/trash', false);
-
-		// Run the `ls` command
-		typeInTerminal('ls');
-		cy.wait(3_000);
-
-		// Close the terminal
-		execVSCodeQuickInput(">Terminal: Detach Session");
-		cy.wait(3_000);
-	})
-})
-
-describe('Code Editor Feature Tests', () => {
-  
-	it('extensions can be installed via terminal', () => {
-		const emrInstallCommand = 'sagemaker-code-editor --install-extension AmazonEMR.emr-tools --extensions-dir /opt/amazon/sagemaker/sagemaker-code-editor-server-data/extensions';
-		
-		// Run the command to install Amazon EMR extension
-		typeInTerminal(emrInstallCommand);
-
-		// Wait until the EMR extension icon is visible on the left sidebar
-		cy.get('ul[role="tablist"]', {timeout: 15_000})
-			.find('li')
-			.filter(':has(a[aria-label="Amazon EMR"])', {timeout: 15_000})
-			.should('exist')
-			.and('be.visible');
-
-		// Close the terminal
-		execVSCodeQuickInput(">Terminal: Detach Session");
-		cy.wait(3_000);
-	})
-})
-
-// The set of directories the testing framework has opened so far
-let openedDirectories: Set<string> = new Set();
-
-function visitOSS() {
+export function visitOSS() {
 	cy.visit(WEBSITE);
 
 	if (RUN_LOCAL) {
@@ -84,22 +39,7 @@ function visitOSS() {
 	}
 }
 
-function closeSignInDialog() {
-	const dialogBox = '[class="monaco-dialog-box"]';
-	const okButton = GENERIC_BUTTON;
-	
-	// TODO: ensure the dialog box is actually the "please sign in" dialog
-	// TODO: make dialogbox a global constant
-	cy.get(dialogBox, {timeout: 30_000}).then((val) => {
-		if (val.length > 0) {
-			cy.log('Dialog Box exists');
-			cy.log('Clicking OK to close dialog box');
-			cy.get(dialogBox).find(okButton).click().wait(1000);
-		}
-	});
-}
-
-function openFolder(path: string = ' ', useQuickInput: boolean = false) {
+export function openFolder(openedDirectories: Set<string>, path: string = ' ', useQuickInput: boolean = false) {
 	const openFolderButton = '[class="monaco-button monaco-text-button"]';
 	const openFolderInputBox = '[class="quick-input-widget show-file-icons"]';
 	const explorerTab = 'div[class="welcome-view-content"]';
@@ -251,7 +191,23 @@ function openFolder(path: string = ' ', useQuickInput: boolean = false) {
 	}
 }
 
-function createFile(filename: string) {
+
+export function closeSignInDialog() {
+	const dialogBox = '[class="monaco-dialog-box"]';
+	const okButton = GENERIC_BUTTON;
+	
+	// TODO: ensure the dialog box is actually the "please sign in" dialog
+	// TODO: make dialogbox a global constant
+	cy.get(dialogBox, {timeout: 30_000}).then((val) => {
+		if (val.length > 0) {
+			cy.log('Dialog Box exists');
+			cy.log('Clicking OK to close dialog box');
+			cy.get(dialogBox).find(okButton).click().wait(1000);
+		}
+	});
+}
+
+export function createFile(filename: string) {
 	const inputBar = execVSCodeQuickInput(`>Create: New File`);
 
 	cy.get(inputBar)
@@ -267,7 +223,8 @@ function createFile(filename: string) {
 		.type('{enter}');
 }
 
-function execVSCodeQuickInput(command: string) {
+
+export function execVSCodeQuickInput(command: string) {
 	cy.get(BACKGROUND).should('exist').type("{ctrl+shift+p}")
 
 	const inputBar = '[placeholder="Search files by name (append : to go to line or @ to go to symbol)"]';
@@ -280,15 +237,14 @@ function execVSCodeQuickInput(command: string) {
 	return inputBar
 }
 
-function typeInTerminal(command: string) {
+export function typeInTerminal(command: string) {
 	const TERMINAL = '[class="xterm-link-layer"]'
 
 	cy.get(BACKGROUND)
 		.should('exist')
-		.type("{ctrl+shift+`}");
+		.type("{ctrl+shift+`}")
+		// .then();
 
-	cy.wait(5_000);
-	
 	cy.get(TERMINAL, {timeout: 15_000})
 		.should('exist')
 		.type(`${command}{enter}`);
