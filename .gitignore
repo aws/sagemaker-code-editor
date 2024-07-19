@@ -2,6 +2,6 @@
 .pc
 node_modules
 vscode
-test/cypress/screenshots
-test/cypress/videos
+test/integ/cypress/screenshots
+test/integ/cypress/videos
 vscode
