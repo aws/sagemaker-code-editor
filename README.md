@@ -13,6 +13,7 @@ To properly patch, please run script:
 `sh ./scripts/install.sh`
 
 This script will:
+
 - use `quilt` to pop any existing patches.
 - update the submodule to verify the local version is in parity with source
 - apply all patches with `quilt` from `./patches`
@@ -38,6 +39,13 @@ Options:
   -h                Show this help message and exit.
 ```
 ***Note***: make sure you have the `'`quotes`'` around the website url.
+
+## Local Setup
+
+- Install Prerequisite tools described [here](https://web.archive.org/web/20231012223533/https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites) for your operating system.
+- Run `sh ./scripts/install.sh`
+- Run `yarn watch` from within the `vscode` folder
+- Open a new terminal and run `./vscode/scripts/code-server.sh --launch`
 
 ## Troubleshooting and Feedback
 
