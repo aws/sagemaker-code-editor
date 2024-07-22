@@ -20,6 +20,25 @@ This script will:
 - runs `./scripts/copy-resource.sh` that will copy patched version of code - oss from `./vscode` into `./patched-vscode` folder along with icon(s) and svg(s) from `./resources` folder
 - runs `yarn install` and downloads built in extensions on patched submodule
 
+## Test Execution
+Follow the previous steps to patch and build the project.
+
+Use the `./scripts/test.sh` script for testing.
+
+```
+Usage: test.sh -w <WEBSITE-URL> [OPTIONS]
+
+Options:
+  -w '<WEBSITE-URL>'  Required. The URL of the website to test.
+  -u                Run OSS unit tests.
+  -i                Run OSS integration tests.
+  -s                Run OSS style check.
+  -c                Run Code Editor UI tests.
+  -l                Run Code Editor UI tests against a local instance (requires -c).
+  -h                Show this help message and exit.
+```
+***Note***: make sure you have the `'`quotes`'` around the website url.
+
 ## Troubleshooting and Feedback
 
 For any issues that customers would like to report, please route to the `amazon-sagemaker-feedback` repository: https://github.com/aws/amazon-sagemaker-feedback

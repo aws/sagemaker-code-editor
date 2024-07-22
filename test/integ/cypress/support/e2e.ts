@@ -19,9 +19,6 @@ import { DEBUG, RUN_LOCAL, WEBSITE, visitOSS } from './commands';
 // https://stackoverflow.com/questions/62980435/the-following-error-originated-from-your-application-code-not-from-cypress
 Cypress.on('uncaught:exception', (err, runnable) => {
 	// Handle the uncaught exception here
-	// You can choose to fail the test, log the error, or take any other action
-	// cy.log('Uncaught exception:', err);
-
 	// Return false to prevent Cypress from failing the test
 	return false;
 });
