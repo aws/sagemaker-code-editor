@@ -99,7 +99,7 @@ export abstract class AbstractExtensionResourceLoaderService implements IExtensi
 					: version,
 				path: 'extension'
 			}));
-			return this._isWebExtensionResourceEndPoint(uri) ? uri.with({ scheme: RemoteAuthorities.getPreferredWebSchema() }) : uri;
+			return this._isWebExtensionResourceEndPoint(uri) ? URI.joinPath(URI.parse(window.location.href), uri.path) : uri;
 		}
 		return undefined;
 	}

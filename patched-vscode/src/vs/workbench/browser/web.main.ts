@@ -96,6 +96,7 @@ import { ISecretStorageService } from 'vs/platform/secrets/common/secrets';
 import { TunnelSource } from 'vs/workbench/services/remote/common/tunnelModel';
 import { mainWindow } from 'vs/base/browser/window';
 import { INotificationService, Severity } from 'vs/platform/notification/common/notification';
+import { SagemakerServerClient } from 'vs/workbench/browser/client';
 
 export class BrowserMain extends Disposable {
 
@@ -130,6 +131,9 @@ export class BrowserMain extends Disposable {
 
 		// Startup
 		const instantiationService = workbench.startup();
+
+		// Create instance of SagemakerServerClient
+		this._register(instantiationService.createInstance(SagemakerServerClient));
 
 		// Window
 		this._register(instantiationService.createInstance(BrowserWindow));
