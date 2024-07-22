@@ -1,7 +1,7 @@
 import { openedDirectories } from "../../support/e2e";
 import { openFolder, typeInTerminal, execVSCodeQuickInput } from "../../support/commands";
 
-describe('Opens folder', () => {
+describe('Folder Operations', () => {
   
 	it('opens folder', () => {
                 // Create a directory

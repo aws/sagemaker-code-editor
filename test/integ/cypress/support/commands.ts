@@ -7,6 +7,19 @@ export const WEBSITE: string = Cypress.env('WEBSITE');
 
 let BASE_PATH: string = '';
 
+/**
+ * Visits the website specified by the WEBSITE constant and performs initial setup.
+ *
+ * This function is typically used at the beginning of a test suite or test case to navigate
+ * to the website under test and ensure it has loaded completely before executing further tests
+ * or actions.
+ *
+ * If the RUN_LOCAL flag is set to true, it will call the closeSignInDialog function to close
+ * any sign-in dialog or modal that may appear when running the tests locally.
+ *
+ * After visiting the website, the function waits for 10 seconds to allow the website to fully
+ * load before proceeding.
+ */
 export function visitOSS() {
 	cy.visit(WEBSITE);
 
@@ -17,6 +30,24 @@ export function visitOSS() {
         cy.wait(10_000);
 }
 
+
+/**
+ * Opens a folder in the Visual Studio Code (VSCode) editor.
+ *
+ * @param {Set<string>} openedDirectories - A set containing the absolute paths of directories that have been previously opened. This is used to determine whether the "Trust Authors" dialog needs to be clicked.
+ * @param {string} [path=' '] - The relative path of the folder to open. Defaults to an empty string.
+ * @param {boolean} [useQuickInput=false] - Whether to use the quick input method to open the folder or the UI method. Defaults to false.
+ *
+ * This function opens a folder in the VSCode editor by either using the quick input method or the UI method (clicking the "Open Folder" button in the Explorer panel). It handles various scenarios, such as waiting for the "Open Folder" button to appear, typing the folder path, and clicking the "Trust Authors" dialog if the folder has not been opened before.
+ *
+ * If the `useQuickInput` parameter is true, the function uses the quick input method to open the folder. Otherwise, it uses the UI method by clicking the "Open Folder" button in the Explorer panel.
+ *
+ * The function keeps track of the opened directories in the `openedDirectories` set. If a directory has been opened before, the "Trust Authors" dialog will not appear again.
+ *
+ * If the `RUN_LOCAL` flag is true, the function also calls the `closeSignInDialog` function after opening the folder.
+ *
+ * Note: This function assumes that the Cypress testing framework is being used and relies on Cypress commands and utilities.
+ */
 export function openFolder(openedDirectories: Set<string>, path: string = ' ', useQuickInput: boolean = false) {
 	const openFolderButton = '[class="monaco-button monaco-text-button"]';
 	const openFolderInputBox = '[class="quick-input-widget show-file-icons"]';
@@ -82,7 +113,6 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 		.should(($input) => {
 			const inputValue = $input.val();
                         expect(inputValue).to.equal(BASE_PATH);
-			// expect(inputValue).to.be.oneOf(['/home/sagemaker-user/', '/Users/donocl/'])
 		})
 
 	let absoluteFilePath: string = "";
@@ -132,14 +162,13 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 		cy.log('Have not previously opened this directory. Need to click \"Trust Authors');
 	}
 
-	const dialogBox = '[class="monaco-dialog-box"]';
 	const dialogMessageBox = '[class="dialog-message-text"]';
 	const yesTrustAuthors = '[class="monaco-button monaco-text-button"][title="Yes, I trust the authors"]';
 
 	// Function to check if dialog box exists and is visible
 	const isDialogVisible = () => {
 		return cy.get('body').then($body => {
-			const dialog = $body.find(dialogBox);
+			const dialog = $body.find(DIALOG_BOX);
 			if (dialog.length > 0 && dialog.is(':visible')) {
                                 const messageBox = dialog.find(dialogMessageBox);
                                 return messageBox.length > 0 && 
@@ -153,10 +182,10 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
         cy.wait(3_000);
 
 	// Click to close the "Trust Authors" dialog box
-	cy.get(dialogBox, {timeout: 30_000})
+	cy.get(DIALOG_BOX, {timeout: 30_000})
 		.then((val) => {
 			if (val.length > 0) {
-				cy.get(dialogBox)
+				cy.get(DIALOG_BOX)
 					.should('be.visible')
 					.within(() => {
 						cy.get(dialogMessageBox)
