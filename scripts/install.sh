@@ -1,5 +1,28 @@
 #!/bin/bash
 
+while getopts "v:" opt; do
+  case $opt in
+    v) version="$OPTARG"
+    ;;
+    \?) echo "Invalid option -$OPTARG" >&2
+    exit 1
+    ;;
+  esac
+
+  case $OPTARG in
+    -*) echo "Option $opt needs a valid argument"
+    exit 1
+    ;;
+  esac
+done
+
+if [[ -z $version ]]; then
+ echo "Please provide version using '-v'";
+ exit 1
+fi
+
+VERSION=$version
+
 # set +e to prevent quilt from exiting when no patches popped
 set +e
 
@@ -12,7 +35,7 @@ quilt pop -a
 rm -rf .pc
 
 # empty vscode module
-printf "\n======== Delete data is vs code module if present ========\n"
+printf "\n======== Delete data in vs code module if present ========\n"
 rm -rf ${PROJ_ROOT}/vscode/.
 
 # re-enable -e to allow exiting on error
@@ -47,7 +70,7 @@ sh ${PROJ_ROOT}/scripts/postinstall.sh
 
 # Build tarball for conda feedstock from vscode dir
 printf "\n======== Build Tarball for Conda Feedstock ========\n"
-bash ${PROJ_ROOT}/scripts/create_code_editor_tarball.sh -v 1.2.0
+bash ${PROJ_ROOT}/scripts/create_code_editor_tarball.sh -v ${VERSION}
 
 # Copy resources
 printf "\n======== Copy resources ========\n"
