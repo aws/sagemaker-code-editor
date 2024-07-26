@@ -5,7 +5,7 @@ Index: sagemaker-code-editor/vscode/extensions/code-editor-idle-extension/README
 @@ -0,0 +1,3 @@
 +# Code Editor Idle Extension
 +
-+The Code Editor Idle Extension monitors user activity and records the last active timestamp (in UTC) to a local file. User activity includes file changes, cursor movements, and terminal activity.
++The Code Editor Idle Extension tracks user activity and logs the last active timestamp (in UTC) to a local file. User activities monitored include file changes, cursor movements, and terminal interactions. Additionally, it provides an API endpoint /api/idle that returns the lastActiveTimestamp.
 \ No newline at end of file
 Index: sagemaker-code-editor/vscode/extensions/code-editor-idle-extension/extension-browser.webpack.config.js
 ===================================================================
