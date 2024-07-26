@@ -6,3 +6,4 @@ webview.diff
 local-storage.diff
 sagemaker-integration.diff
 license.diff
+idle-detection.patch

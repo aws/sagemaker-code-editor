@@ -1,0 +1,10 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"outDir": "./out"
+	},
+	"include": [
+		"../code-editor-idle-extension/src/**/*",
+		"../../src/vscode-dts/vscode.d.ts"
+	]
+}

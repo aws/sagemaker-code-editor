@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createReadStream } from 'fs';
+import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
 import * as path from 'path';
 import * as http from 'http';
@@ -100,6 +101,7 @@ export class WebClientServer {
 	private readonly _staticRoute: string;
 	private readonly _callbackRoute: string;
 	private readonly _webExtensionRoute: string;
+	private readonly _idleRoute: string;
 
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
@@ -115,6 +117,7 @@ export class WebClientServer {
 		this._staticRoute = `${serverRootPath}/static`;
 		this._callbackRoute = `${serverRootPath}/callback`;
 		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
+		this._idleRoute = '/api/idle';
 	}
 
 	/**
@@ -131,6 +134,9 @@ export class WebClientServer {
 			}
 			if (pathname === this._basePath) {
 				return this._handleRoot(req, res, parsedUrl);
+			}
+			if (pathname === this._idleRoute) {
+				return this._handleIdle(req, res);
 			}
 			if (pathname === this._callbackRoute) {
 				// callback support
@@ -450,6 +456,27 @@ export class WebClientServer {
 			'Content-Security-Policy': cspDirectives
 		});
 		return void res.end(data);
+	}
+
+	/**
+ 	 * Handles API requests to retrieve the last activity timestamp.
+   */
+	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		try {
+			const homeDirectory = process.env.HOME || process.env.USERPROFILE;
+			if (!homeDirectory) {
+				throw new Error('Home directory not found');
+			}
+
+			const idleFilePath = path.join(homeDirectory, '.code-editor-last-active-timestamp');
+			const data = await readFile(idleFilePath, 'utf8');
+
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify({ lastActiveTimestamp: data }));
+		} catch (error) {
+			serveError(req, res, 500, error.message)
+		}
 	}
 }
 

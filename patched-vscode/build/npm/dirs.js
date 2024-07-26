@@ -40,6 +40,7 @@ const dirs = [
 	'extensions/php-language-features',
 	'extensions/references-view',
 	'extensions/sagemaker-extension',
+	'extensions/code-editor-idle-extension',
 	'extensions/search-result',
 	'extensions/simple-browser',
 	'extensions/tunnel-forwarding',
