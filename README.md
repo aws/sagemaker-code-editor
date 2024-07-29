@@ -28,6 +28,7 @@ This script will:
 - Run `yarn watch` from within the `vscode` folder
 - Open a new terminal and run `./vscode/scripts/code-server.sh --launch`
 
+<<<<<<< HEAD
 ## Make Commands
 
 Available make targets for building and testing:
@@ -40,6 +41,37 @@ Available make targets for building and testing:
 - `make clean` - Clean build artifacts and act temporary files
 
 Example: `make run-local TARBALL=code-editor1.8.0b5.tar.gz`
+=======
+## Test Execution
+Follow the previous steps to patch and build the project.
+
+Use the `./scripts/test.sh` script for testing.
+
+```
+Usage: test.sh --website='<WEBSITE-URL>' [OPTIONS]
+
+Required:
+    --website='<WEBSITE-URL>'     URL of the Code Editor instance to test.
+
+Options:
+    -u|--unit-test                Run OSS unit tests.
+    -i|--integ-test               Run OSS integration tests.
+    -s|--style-check              Run OSS style check.
+    -c|--cypress-integ-test       Run Code Editor UI tests.
+    -l|--local                    Run Code Editor UI tests against a local instance (requires -c).
+    -n|--no-patches               Skip automatic patching of OSS.
+    -h|--help                     Show this help message and exit.
+```
+***Note***: make sure you have the `'`quotes`'` around the website url.
+
+### Example
+From the `sage-maker-code-editor` directory, run the following command in your terminal:
+
+```shell
+sh ./scripts/test.sh --website='http://localhost:9090' -uicl
+```
+This will run the OSS unit and integration tests, and the Cypress integration tests for a local Code Editor instance at `localhost:9090`. 
+>>>>>>> 0e834c9c (add default automatic patching)
 
 ## Troubleshooting and Feedback
 
