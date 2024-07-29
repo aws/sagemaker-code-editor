@@ -306,7 +306,7 @@ export class WebClientServer {
 			scopes: [['user:email'], ['repo']]
 		} : undefined;
 
-		const basePath: string = this._environmentService.args['server-base-path'] || "/"
+		const basePath: string = this._environmentService.args['base-path'] || "/"
 		const base = relativeRoot(basePath)
 		const vscodeBase = relativePath(basePath)
 
