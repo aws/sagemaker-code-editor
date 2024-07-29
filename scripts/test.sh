@@ -1,20 +1,21 @@
 #!/bin/bash
 
-show_help() {
-    printf "Usage: $(basename $0) -w <WEBSITE-URL> [OPTIONS]\n\n"
-    printf "Options:\n"
-    printf "  -w '<WEBSITE-URL>'  Required. The URL of the website to test.\n"
-    printf "  -u                Run OSS unit tests.\n"
-    printf "  -i                Run OSS integration tests.\n"
-    printf "  -s                Run OSS style check.\n"
-    printf "  -c                Run Code Editor UI tests.\n"
-    printf "  -l                Run Code Editor UI tests against a local instance (requires -c).\n"
-    printf "  -h                Show this help message and exit.\n"
-}
-
 usage() {
-    printf "script usage: $(basename $0) -w '<WEBSITE-URL>' [-u] [-i] [-s] [-c] [-l] [-h]\n" >&2
-    exit 1
+    printf """
+Usage: $(basename $0) --website='<WEBSITE-URL>' [OPTIONS]
+
+Required:
+    --website='<WEBSITE-URL>'     URL of the Code Editor instance to test.
+
+Options:
+    -u|--unit-test                Run OSS unit tests.
+    -i|--integ-test               Run OSS integration tests.
+    -s|--style-check              Run OSS style check.
+    -c|--cypress-integ-test       Run Code Editor UI tests.
+    -l|--local                    Run Code Editor UI tests against a local instance (requires -c).
+    -n|--no-patches               Skip automatic patching of OSS.
+    -h|--help                     Show this help message and exit.
+"""
 }
 
 # Set current project root
@@ -26,32 +27,54 @@ C_FLAG_PROVIDED=false
 L_FLAG_PROVIDED=false
 
 # Get command line arguments
-while getopts :w:uislch OPTION
-do
-    case "${OPTION}" in
-        w) WEBSITE="${OPTARG}"; W_FLAG_PROVIDED=true ;;
+optspec=":uisclnh-:"
+while getopts "$optspec" optchar; do
+    case "${optchar}" in\
         u) RUN_OSS_UNIT=true ;;
         i) RUN_OSS_INTEG=true ;;
         s) RUN_OSS_STYLE=true ;;
         c) RUN_CYPRESS_INTEG=true; C_FLAG_PROVIDED=true ;;
         l) RUN_LOCAL=true; L_FLAG_PROVIDED=true ;;
-        h) show_help; exit 0 ;;
+        n) NO_PATCHES=true ;;
+        h) usage; exit 0 ;;
+        -) 
+            case "${OPTARG}" in
+                website=*) WEBSITE=${OPTARG#*=}; W_FLAG_PROVIDED=true ;;
+                unit-test) RUN_OSS_UNIT=true ;;
+                integ-test) RUN_OSS_INTEG=true ;;
+                style-check) RUN_OSS_STYLE=true ;;
+                cypress-integ-test) RUN_CYPRESS_INTEG=true; C_FLAG_PROVIDED=true ;;
+                local) RUN_LOCAL=true; L_FLAG_PROVIDED=true ;;
+                no-patches) NO_PATCHES=true ;;
+                help) usage; exit 0 ;;
+            esac;;
         :) printf "Error: -${OPTARG} requires an argument.\n" >&2; exit 1 ;;
-        ?) usage ;;
+        ?) usage; exit 1 ;;
     esac
 done
 
 # Check if -w flag was provided
 if ! $W_FLAG_PROVIDED; then
-    printf "Error: -w <WEBSITE-URL> is required.\n" >&2
+    printf "Error: --website='<WEBSITE-URL>' is required.\n\n" >&2
     usage
+    exit 1
 fi
 
 # Check if -l flag is provided without -c flag
 if $L_FLAG_PROVIDED && ! $C_FLAG_PROVIDED; then
-    printf "Error: -l flag can only be used when -c flag is also present.\n" >&2
+    printf "Error: -l flag can only be used when -c flag is also present.\n\n" >&2
     usage
+    exit 1
 fi
+
+# Apply patches if necessary
+printf "\n======== Applying patches ========\n"
+if [ "$NO_PATCHES" != true ]; then
+    sh ${PROJ_ROOT}/scripts/install.sh
+    else
+    printf "Skipping patching...\n"
+fi
+
 
 TEST_NAMES=()
 TEST_RESULTS=()

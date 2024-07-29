@@ -21,31 +21,42 @@ This script will:
 - runs `./scripts/copy-resource.sh` that will copy patched version of code - oss from `./vscode` into `./patched-vscode` folder along with icon(s) and svg(s) from `./resources` folder
 - runs `yarn install` and downloads built in extensions on patched submodule
 
-## Test Execution
-Follow the previous steps to patch and build the project.
-
-Use the `./scripts/test.sh` script for testing.
-
-```
-Usage: test.sh -w <WEBSITE-URL> [OPTIONS]
-
-Options:
-  -w '<WEBSITE-URL>'  Required. The URL of the website to test.
-  -u                Run OSS unit tests.
-  -i                Run OSS integration tests.
-  -s                Run OSS style check.
-  -c                Run Code Editor UI tests.
-  -l                Run Code Editor UI tests against a local instance (requires -c).
-  -h                Show this help message and exit.
-```
-***Note***: make sure you have the `'`quotes`'` around the website url.
-
 ## Local Setup
 
 - Install Prerequisite tools described [here](https://web.archive.org/web/20231012223533/https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites) for your operating system.
 - Run `sh ./scripts/install.sh`
 - Run `yarn watch` from within the `vscode` folder
 - Open a new terminal and run `./vscode/scripts/code-server.sh --launch`
+
+## Test Execution
+Follow the previous steps to patch and build the project.
+
+Use the `./scripts/test.sh` script for testing.
+
+```
+Usage: test.sh --website='<WEBSITE-URL>' [OPTIONS]
+
+Required:
+    --website='<WEBSITE-URL>'     URL of the Code Editor instance to test.
+
+Options:
+    -u|--unit-test                Run OSS unit tests.
+    -i|--integ-test               Run OSS integration tests.
+    -s|--style-check              Run OSS style check.
+    -c|--cypress-integ-test       Run Code Editor UI tests.
+    -l|--local                    Run Code Editor UI tests against a local instance (requires -c).
+    -n|--no-patches               Skip automatic patching of OSS.
+    -h|--help                     Show this help message and exit.
+```
+***Note***: make sure you have the `'`quotes`'` around the website url.
+
+### Example
+From the `sage-maker-code-editor` directory, run the following command in your terminal:
+
+```shell
+sh ./scripts/test.sh --website='http://localhost:9090' -uicl
+```
+This will run the OSS unit and integration tests, and the Cypress integration tests for a local Code Editor instance at `localhost:9090`. 
 
 ## Troubleshooting and Feedback
 
