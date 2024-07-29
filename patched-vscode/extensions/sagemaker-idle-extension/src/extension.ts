@@ -4,6 +4,7 @@ import * as path from "path";
 
 let idleFilePath: string
 let terminalActivityInterval: NodeJS.Timeout | undefined
+const LOG_PREFIX = "[sagemaker-idle-extension]"
 const CHECK_INTERVAL = 60000; // 60 seconds interval
 
 export function activate(context: vscode.ExtensionContext) {
@@ -25,10 +26,10 @@ export function deactivate() {
 function initializeIdleFilePath() {
 	const homeDirectory = process.env.HOME || process.env.USERPROFILE;
 	if (!homeDirectory) {
-		console.log("Unable to determine the home directory.");
+		console.log(`${LOG_PREFIX} Unable to determine the home directory.`);
 		return;
 	}
-	idleFilePath = path.join(homeDirectory, ".code-editor-last-active-timestamp");
+	idleFilePath = path.join(homeDirectory, ".sagemaker-last-active-timestamp");
 }
 
 /**
@@ -66,12 +67,20 @@ const startMonitoringTerminalActivity = () => {
 
 /**
  * Checks for terminal activity by reading the /dev/pts directory and comparing modification times of the files.
- * If activity is detected, it updates the last activity timestamp.
+ * 
+ * The /dev/pts directory is used in Unix-like operating systems to represent pseudo-terminal (PTY) devices.
+ * Each active terminal session is assigned a PTY device. These devices are represented as files within the /dev/pts directory. 
+ * When a terminal session has activity, such as when a user inputs commands or output is written to the terminal, 
+ * the modification time (mtime) of the corresponding PTY device file is updated. By monitoring the modification 
+ * times of the files in the /dev/pts directory, we can detect terminal activity.
+ * 
+ * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
+ * updates the last activity timestamp.
  */
 const checkTerminalActivity = () => {
 	fs.readdir("/dev/pts", (err, files) => {
 		if (err) {
-			console.error("Error reading /dev/pts directory:", err);
+			console.error(`${LOG_PREFIX} Error reading /dev/pts directory:`, err);
 			return;
 		}
 
@@ -83,7 +92,7 @@ const checkTerminalActivity = () => {
 				const mtime = new Date(stats.mtime).getTime();
 				return now - mtime < CHECK_INTERVAL;
 			} catch (error) {
-				console.error("Error reading file stats:", error);
+				console.error(`${LOG_PREFIX}}Error reading file stats:`, error);
 				return false;
 			}
 		});
@@ -95,7 +104,7 @@ const checkTerminalActivity = () => {
 };
 
 /**
- * Updates the last activity timestamp by writing the current timestamp to the idle file and updating the status bar.
+ * Updates the last activity timestamp by writing the current timestamp to the idle file.
  */
 function updateLastActivityTimestamp() {
 	const timestamp = new Date().toISOString();

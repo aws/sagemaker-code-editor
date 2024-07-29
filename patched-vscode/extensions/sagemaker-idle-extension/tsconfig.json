@@ -4,7 +4,7 @@
 		"outDir": "./out"
 	},
 	"include": [
-		"../code-editor-idle-extension/src/**/*",
+		"../sagemaker-idle-extension/src/**/*",
 		"../../src/vscode-dts/vscode.d.ts"
 	]
 }
