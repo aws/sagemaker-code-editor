@@ -147,7 +147,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/extension.ts
-@@ -0,0 +1,112 @@
+@@ -0,0 +1,116 @@
 +import * as vscode from "vscode";
 +import * as fs from "fs";
 +import * as path from "path";
@@ -180,6 +180,9 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +		return;
 +	}
 +	idleFilePath = path.join(homeDirectory, ".sagemaker-last-active-timestamp");
++
++	// Set initial lastActivetimestamp
++	updateLastActivityTimestamp()
 +}
 +
 +/**
@@ -242,7 +245,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +				const mtime = new Date(stats.mtime).getTime();
 +				return now - mtime < CHECK_INTERVAL;
 +			} catch (error) {
-+				console.error(`${LOG_PREFIX}}Error reading file stats:`, error);
++				console.error(`${LOG_PREFIX} Error reading file stats:`, error);
 +				return false;
 +			}
 +		});
@@ -254,7 +257,8 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +};
 +
 +/**
-+ * Updates the last activity timestamp by writing the current timestamp to the idle file. 
++ * Updates the last activity timestamp by recording the current timestamp in the idle file and
++ * refreshing the status bar. The timestamp should be in ISO 8601 format and set to the UTC timezone.
 + */
 +function updateLastActivityTimestamp() {
 +	const timestamp = new Date().toISOString();

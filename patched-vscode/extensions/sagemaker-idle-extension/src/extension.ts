@@ -30,6 +30,9 @@ function initializeIdleFilePath() {
 		return;
 	}
 	idleFilePath = path.join(homeDirectory, ".sagemaker-last-active-timestamp");
+
+	// Set initial lastActivetimestamp
+	updateLastActivityTimestamp()
 }
 
 /**
@@ -103,8 +106,9 @@ const checkTerminalActivity = () => {
 	});
 };
 
-/**
- * Updates the last activity timestamp by writing the current timestamp to the idle file.
+ /**
+ * Updates the last activity timestamp by recording the current timestamp in the idle file and
+ * refreshing the status bar. The timestamp should be in ISO 8601 format and set to the UTC timezone.
  */
 function updateLastActivityTimestamp() {
 	const timestamp = new Date().toISOString();
