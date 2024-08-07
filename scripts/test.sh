@@ -8,28 +8,32 @@ Required:
     --website='<WEBSITE-URL>'     URL of the Code Editor instance to test.
 
 Options:
-    -u|--unit-test                Run OSS unit tests.
-    -i|--integ-test               Run OSS integration tests.
-    -s|--style-check              Run OSS style check.
-    -c|--cypress-integ-test       Run Code Editor UI tests.
-    -l|--local                    Run Code Editor UI tests against a local instance (requires -c).
-    -n|--no-patches               Skip automatic patching of OSS.
-    -h|--help                     Show this help message and exit.
+    -w '<WEBSITE-URL>'| --website='<WEBSITE_URL>'       URL of the Code Editor instance to test.
+    -u|--unit-test                                      Run OSS unit tests.
+    -i|--integ-test                                     Run OSS integration tests.
+    -s|--style-check                                    Run OSS style check.
+    -c|--cypress-integ-test                             Run Code Editor UI tests.
+    -l|--local                                          Run Code Editor UI tests against a local instance (requires -c).
+    -n|--no-patches                                     Skip automatic patching of OSS.
+    -h|--help                                           Show this help message and exit.
 """
 }
 
 # Set current project root
 PROJ_ROOT=$(pwd)
 
-# Initialize variables to track if -w, -c, and -l are provided
-W_FLAG_PROVIDED=false
+# Initialize default website value
+WEBSITE="http://localhost:8080"
+
+# Initialize variables to track if -c and -l are provided
 C_FLAG_PROVIDED=false
 L_FLAG_PROVIDED=false
 
 # Get command line arguments
-optspec=":uisclnh-:"
+optspec=":w:uisclnh-:"
 while getopts "$optspec" optchar; do
     case "${optchar}" in\
+        w) WEBSITE=${OPTARG} ;;
         u) RUN_OSS_UNIT=true ;;
         i) RUN_OSS_INTEG=true ;;
         s) RUN_OSS_STYLE=true ;;
@@ -39,7 +43,7 @@ while getopts "$optspec" optchar; do
         h) usage; exit 0 ;;
         -) 
             case "${OPTARG}" in
-                website=*) WEBSITE=${OPTARG#*=}; W_FLAG_PROVIDED=true ;;
+                website=*) WEBSITE=${OPTARG#*=} ;;
                 unit-test) RUN_OSS_UNIT=true ;;
                 integ-test) RUN_OSS_INTEG=true ;;
                 style-check) RUN_OSS_STYLE=true ;;
@@ -53,19 +57,25 @@ while getopts "$optspec" optchar; do
     esac
 done
 
-# Check if -w flag was provided
-if ! $W_FLAG_PROVIDED; then
-    printf "Error: --website='<WEBSITE-URL>' is required.\n\n" >&2
-    usage
-    exit 1
-fi
-
 # Check if -l flag is provided without -c flag
 if $L_FLAG_PROVIDED && ! $C_FLAG_PROVIDED; then
     printf "Error: -l flag can only be used when -c flag is also present.\n\n" >&2
     usage
     exit 1
 fi
+
+
+printf "\n======== Configuration ========\n"
+printf "Running tests against: $WEBSITE\n"
+printf "Options:\n"
+printf "  Run OSS unit tests: %s\n" "${RUN_OSS_UNIT:-false}"
+printf "  Run OSS integration tests: %s\n" "${RUN_OSS_INTEG:-false}"
+printf "  Run OSS style check: %s\n" "${RUN_OSS_STYLE:-false}"
+printf "  Run Code Editor UI tests: %s\n" "${RUN_CYPRESS_INTEG:-false}"
+printf "  Run Code Editor UI tests against local instance: %s\n" "${RUN_LOCAL:-false}"
+printf "  Skip automatic patching of OSS: %s\n" "${NO_PATCHES:-false}"
+printf "\n"
+
 
 # Apply patches if necessary
 printf "\n======== Applying patches ========\n"
@@ -86,6 +96,7 @@ updateNumTestsPassed() {
     fi
 }
 
+
 # Run unit tests
 if [ "$RUN_OSS_UNIT" = true ]; then
     printf "\n======== Running OSS unit tests ========\n"
@@ -96,6 +107,7 @@ if [ "$RUN_OSS_UNIT" = true ]; then
     TEST_RESULTS+=($PASS_UNIT_TESTS)
     updateNumTestsPassed $PASS_UNIT_TESTS
 fi
+
 
 # Run integration tests
 if [ "$RUN_OSS_INTEG" = true ]; then
@@ -110,6 +122,7 @@ if [ "$RUN_OSS_INTEG" = true ]; then
     updateNumTestsPassed $PASS_INTEG_TESTS
 fi
 
+
 # Run style checks
 if [ "$RUN_OSS_STYLE" = true ]; then
     printf "\n======== Running OSS style check ========\n"
@@ -120,6 +133,7 @@ if [ "$RUN_OSS_STYLE" = true ]; then
     TEST_RESULTS+=($PASS_STYLE_CHECK)
     updateNumTestsPassed $PASS_STYLE_CHECK
 fi
+
 
 # Run Code Editor UI tests
 if [ "$RUN_CYPRESS_INTEG" = true ]; then
