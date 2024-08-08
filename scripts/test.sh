@@ -23,7 +23,7 @@ Options:
 PROJ_ROOT=$(pwd)
 
 # Initialize default website value
-WEBSITE="http://localhost:8080"
+WEBSITE="http://localhost:9888"
 
 # Initialize variables to track if -c and -l are provided
 C_FLAG_PROVIDED=false
