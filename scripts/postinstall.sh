@@ -15,6 +15,9 @@ if [ ! -f "$POSTINSTALL_JS_PATH" ]; then
     exit 1
 fi
 
+# set +e to prevent script from exiting when not on macOS
+set +e
+
 # Check if on macOS
 system_profiler SPSoftwareDataType
 
