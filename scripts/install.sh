@@ -1,5 +1,7 @@
 #!/bin/bash
 
+VERBOSE_FLAG=$([[ "$1" == "--verbose" ]] && echo "--verbose" || echo "")
+
 # set +e to prevent quilt from exiting when no patches popped
 set +e
 
@@ -41,5 +43,5 @@ rm -rf "${PROJ_ROOT}/vscode/node_modules"
 
 # Build the project
 printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
-yarn --cwd "${PROJ_ROOT}/vscode" install --pure-lockfile --verbose
+yarn --cwd "${PROJ_ROOT}/vscode" install --pure-lockfile ${VERBOSE_FLAG}
 yarn --cwd "${PROJ_ROOT}/vscode" download-builtin-extensions
