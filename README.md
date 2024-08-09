@@ -10,7 +10,9 @@ Whenever we create a new branch with `vscode` pointing to a specific commit, thi
 
 To properly patch, please run script:
 
-`sh ./scripts/install.sh`
+```bash
+sh ./scripts/install.sh
+```
 
 This script will:
 
@@ -20,6 +22,13 @@ This script will:
 - runs `./scripts/postinstall.sh` that will comment out 2 breaking `git config` lines from `./vscode/build/npm/postinstall.js`
 - runs `./scripts/copy-resource.sh` that will copy patched version of code - oss from `./vscode` into `./patched-vscode` folder along with icon(s) and svg(s) from `./resources` folder
 - runs `yarn install` and downloads built in extensions on patched submodule
+
+Adding the `--verbose` flag will provide additional information for the `yarn install` command.
+
+Example: 
+```bash
+sh ./scripts/install.sh --verbose
+```
 
 ## Local Setup
 
