@@ -70,9 +70,9 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/web.main.ts
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/browser/web.main.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/browser/web.main.ts
 @@ -95,6 +95,7 @@ import { TunnelSource } from 'vs/workbench/services/re
- import { IEncryptionService } from 'vs/platform/encryption/common/encryptionService';
- import { ISecretStorageService } from 'vs/platform/secrets/common/secrets';
  import { TunnelSource } from 'vs/workbench/services/remote/common/tunnelModel';
+ import { mainWindow } from 'vs/base/browser/window';
+ import { INotificationService, Severity } from 'vs/platform/notification/common/notification';
 +import { SagemakerServerClient } from 'vs/workbench/browser/client';
  
  export class BrowserMain extends Disposable {
@@ -122,8 +122,8 @@ Index: sagemaker-code-editor/vscode/product.json
 -		},
 -		{
 -			"name": "ms-vscode.js-debug",
--			"version": "1.83.1",
--			"sha256": "1452fdbab8d0d83ca5765bb66170d50b005c97ca4dcd13e154c3401d842a92d4",
+-			"version": "1.90.0",
+-			"sha256": "1317dd7d1ac50641c1534a3e957ecbc94349f4fbd897acb916da11eea3208a66",
 -			"repo": "https://github.com/microsoft/vscode-js-debug",
 -			"metadata": {
 -				"id": "25629058-ddac-4e17-abba-74678e126c5d",
@@ -138,8 +138,8 @@ Index: sagemaker-code-editor/vscode/product.json
 -		},
 -		{
 -			"name": "ms-vscode.vscode-js-profile-table",
--			"version": "1.0.3",
--			"sha256": "b9dab017506d9e6a469a0f82b392e4cb1d7a25a4843f1db8ba396cbee209cfc5",
+-			"version": "1.0.9",
+-			"sha256": "3b62ee4276a2bbea3fe230f94b1d5edd915b05966090ea56f882e1e0ab53e1a6",
 -			"repo": "https://github.com/microsoft/vscode-js-profile-visualizer",
 -			"metadata": {
 -				"id": "7e52b41b-71ad-457b-ab7e-0620f1fc4feb",
@@ -172,7 +172,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
 @@ -59,15 +59,17 @@ else {
  	if (Object.keys(product).length === 0) {
  		Object.assign(product, {
- 			version: '1.82.0-dev',
+ 			version: '1.90.0-dev',
 -			nameShort: 'Code - OSS Dev',
 -			nameLong: 'Code - OSS Dev',
 +			nameShort: 'CodeEditor',
@@ -209,7 +209,7 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/extensions/git/package.nls.json
 +++ sagemaker-code-editor/vscode/extensions/git/package.nls.json
-@@ -203,7 +203,7 @@
+@@ -217,7 +217,7 @@
  		"message": "List of git commands (ex: commit, push) that would have their `stdout` logged to the [git output](command:git.showOutput). If the git command has a client-side hook configured, the client-side hook's `stdout` will also be logged to the [git output](command:git.showOutput).",
  		"comment": [
  			"{Locked='](command:git.showOutput'}",
@@ -218,7 +218,7 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -230,8 +230,8 @@
+@@ -245,8 +245,8 @@
  	"config.untrackedChanges.hidden": "Untracked changes are hidden and excluded from several actions.",
  	"config.requireGitUserConfig": "Controls whether to require explicit Git user configuration or allow Git to guess if missing.",
  	"config.showCommitInput": "Controls whether to show the commit input in the Git source control panel.",
@@ -229,7 +229,7 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  	"config.timeline.showAuthor": "Controls whether to show the commit author in the Timeline view.",
  	"config.timeline.showUncommitted": "Controls whether to show uncommitted changes in the Timeline view.",
  	"config.timeline.date": "Controls which date to use for items in the Timeline view.",
-@@ -282,7 +282,7 @@
+@@ -301,7 +301,7 @@
  		"message": "[Download Git for Windows](https://git-scm.com/download/win)\nAfter installing, please [reload](command:workbench.action.reloadWindow) (or [troubleshoot](command:git.showOutput)). Additional source control providers can be installed [from the Marketplace](command:workbench.extensions.search?%22%40category%3A%5C%22scm%20providers%5C%22%22).",
  		"comment": [
  			"{Locked='](command:workbench.action.reloadWindow'}",
@@ -238,7 +238,7 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -290,7 +290,7 @@
+@@ -309,7 +309,7 @@
  		"message": "[Download Git for macOS](https://git-scm.com/download/mac)\nAfter installing, please [reload](command:workbench.action.reloadWindow) (or [troubleshoot](command:git.showOutput)). Additional source control providers can be installed [from the Marketplace](command:workbench.extensions.search?%22%40category%3A%5C%22scm%20providers%5C%22%22).",
  		"comment": [
  			"{Locked='](command:workbench.action.reloadWindow'}",
@@ -247,7 +247,7 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -298,48 +298,48 @@
+@@ -317,48 +317,48 @@
  		"message": "Source control depends on Git being installed.\n[Download Git for Linux](https://git-scm.com/download/linux)\nAfter installing, please [reload](command:workbench.action.reloadWindow) (or [troubleshoot](command:git.showOutput)). Additional source control providers can be installed [from the Marketplace](command:workbench.extensions.search?%22%40category%3A%5C%22scm%20providers%5C%22%22).",
  		"comment": [
  			"{Locked='](command:workbench.action.reloadWindow'}",
@@ -258,8 +258,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  	},
  	"view.workbench.scm.missing": "Install Git, a popular source control system, to track code changes and collaborate with others. Learn more in our [Git guides](https://aka.ms/vscode-scm).",
  	"view.workbench.scm.disabled": {
--		"message": "If you would like to use git features, please enable git in your [settings](command:workbench.action.openSettings?%5B%22git.enabled%22%5D).\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
-+		"message": "If you would like to use git features, please enable git in your [settings](command:workbench.action.openSettings?%5B%22git.enabled%22%5D).\nTo learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm).",
+-		"message": "If you would like to use Git features, please enable Git in your [settings](command:workbench.action.openSettings?%5B%22git.enabled%22%5D).\nTo learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
++		"message": "If you would like to use Git features, please enable Git in your [settings](command:workbench.action.openSettings?%5B%22git.enabled%22%5D).\nTo learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm).",
  		"comment": [
  			"{Locked='](command:workbench.action.openSettings?%5B%22git.enabled%22%5D'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -268,8 +268,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  		]
  	},
  	"view.workbench.scm.empty": {
--		"message": "In order to use git features, you can open a folder containing a git repository or clone from a URL.\n[Open Folder](command:vscode.openFolder)\n[Clone Repository](command:git.clone)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
-+		"message": "In order to use git features, you can open a folder containing a git repository or clone from a URL.\n[Open Folder](command:vscode.openFolder)\n[Clone Repository](command:git.clone)\nTo learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm).",
+-		"message": "In order to use Git features, you can open a folder containing a Git repository or clone from a URL.\n[Open Folder](command:vscode.openFolder)\n[Clone Repository](command:git.clone)\nTo learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
++		"message": "In order to use Git features, you can open a folder containing a Git repository or clone from a URL.\n[Open Folder](command:vscode.openFolder)\n[Clone Repository](command:git.clone)\nTo learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm).",
  		"comment": [
  			"{Locked='](command:vscode.openFolder'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -278,8 +278,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  		]
  	},
  	"view.workbench.scm.folder": {
--		"message": "The folder currently open doesn't have a git repository. You can initialize a repository which will enable source control features powered by git.\n[Initialize Repository](command:git.init?%5Btrue%5D)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
-+		"message": "The folder currently open doesn't have a git repository. You can initialize a repository which will enable source control features powered by git.\n[Initialize Repository](command:git.init?%5Btrue%5D)\nTo learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm).",
+-		"message": "The folder currently open doesn't have a Git repository. You can initialize a repository which will enable source control features powered by Git.\n[Initialize Repository](command:git.init?%5Btrue%5D)\nTo learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
++		"message": "The folder currently open doesn't have a Git repository. You can initialize a repository which will enable source control features powered by Git.\n[Initialize Repository](command:git.init?%5Btrue%5D)\nTo learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm).",
  		"comment": [
  			"{Locked='](command:git.init?%5Btrue%5D'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -288,8 +288,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  		]
  	},
  	"view.workbench.scm.workspace": {
--		"message": "The workspace currently open doesn't have any folders containing git repositories. You can initialize a repository on a folder which will enable source control features powered by git.\n[Initialize Repository](command:git.init)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
-+		"message": "The workspace currently open doesn't have any folders containing git repositories. You can initialize a repository on a folder which will enable source control features powered by git.\n[Initialize Repository](command:git.init)\nTo learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm).",
+-		"message": "The workspace currently open doesn't have any folders containing Git repositories. You can initialize a repository on a folder which will enable source control features powered by Git.\n[Initialize Repository](command:git.init)\nTo learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
++		"message": "The workspace currently open doesn't have any folders containing Git repositories. You can initialize a repository on a folder which will enable source control features powered by Git.\n[Initialize Repository](command:git.init)\nTo learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm).",
  		"comment": [
  			"{Locked='](command:git.init'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -298,8 +298,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  		]
  	},
  	"view.workbench.scm.emptyWorkspace": {
--		"message": "The workspace currently open doesn't have any folders containing git repositories.\n[Add Folder to Workspace](command:workbench.action.addRootFolder)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
-+		"message": "The workspace currently open doesn't have any folders containing git repositories.\n[Add Folder to Workspace](command:workbench.action.addRootFolder)\nTo learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm).",
+-		"message": "The workspace currently open doesn't have any folders containing Git repositories.\n[Add Folder to Workspace](command:workbench.action.addRootFolder)\nTo learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
++		"message": "The workspace currently open doesn't have any folders containing Git repositories.\n[Add Folder to Workspace](command:workbench.action.addRootFolder)\nTo learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm).",
  		"comment": [
  			"{Locked='](command:workbench.action.addRootFolder'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -307,7 +307,7 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -354,7 +354,7 @@
+@@ -373,7 +373,7 @@
  		"comment": [
  			"{Locked='](command:git.openRepositoriesInParentFolders'}",
  			"{Locked='](command:workbench.action.openSettings?%5B%22git.openRepositoryInParentFolders%22%5D'}",
@@ -316,7 +316,7 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -363,7 +363,7 @@
+@@ -382,7 +382,7 @@
  		"comment": [
  			"{Locked='](command:git.openRepositoriesInParentFolders'}",
  			"{Locked='](command:workbench.action.openSettings?%5B%22git.openRepositoryInParentFolders%22%5D'}",
@@ -325,8 +325,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -371,7 +371,7 @@
- 		"message": "The detected git repository is potentially unsafe as the folder is owned by someone other than the current user.\n[Manage Unsafe Repositories](command:git.manageUnsafeRepositories)\nTo learn more about unsafe repositories [read our docs](https://aka.ms/vscode-git-unsafe-repository).",
+@@ -390,7 +390,7 @@
+ 		"message": "The detected Git repository is potentially unsafe as the folder is owned by someone other than the current user.\n[Manage Unsafe Repositories](command:git.manageUnsafeRepositories)\nTo learn more about unsafe repositories [read our docs](https://aka.ms/vscode-git-unsafe-repository).",
  		"comment": [
  			"{Locked='](command:git.manageUnsafeRepositories'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -334,8 +334,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -379,23 +379,23 @@
- 		"message": "The detected git repositories are potentially unsafe as the folders are owned by someone other than the current user.\n[Manage Unsafe Repositories](command:git.manageUnsafeRepositories)\nTo learn more about unsafe repositories [read our docs](https://aka.ms/vscode-git-unsafe-repository).",
+@@ -398,23 +398,23 @@
+ 		"message": "The detected Git repositories are potentially unsafe as the folders are owned by someone other than the current user.\n[Manage Unsafe Repositories](command:git.manageUnsafeRepositories)\nTo learn more about unsafe repositories [read our docs](https://aka.ms/vscode-git-unsafe-repository).",
  		"comment": [
  			"{Locked='](command:git.manageUnsafeRepositories'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -344,8 +344,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  		]
  	},
  	"view.workbench.scm.closedRepository": {
--		"message": "A git repository was found that was previously closed.\n[Reopen Closed Repository](command:git.reopenClosedRepositories)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
-+		"message": "A git repository was found that was previously closed.\n[Reopen Closed Repository](command:git.reopenClosedRepositories)\nTo learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm).",
+-		"message": "A Git repository was found that was previously closed.\n[Reopen Closed Repository](command:git.reopenClosedRepositories)\nTo learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
++		"message": "A Git repository was found that was previously closed.\n[Reopen Closed Repository](command:git.reopenClosedRepositories)\nTo learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm).",
  		"comment": [
  			"{Locked='](command:git.reopenClosedRepositories'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -354,8 +354,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  		]
  	},
  	"view.workbench.scm.closedRepositories": {
--		"message": "Git repositories were found that were previously closed.\n[Reopen Closed Repositories](command:git.reopenClosedRepositories)\nTo learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
-+		"message": "Git repositories were found that were previously closed.\n[Reopen Closed Repositories](command:git.reopenClosedRepositories)\nTo learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm).",
+-		"message": "Git repositories were found that were previously closed.\n[Reopen Closed Repositories](command:git.reopenClosedRepositories)\nTo learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm).",
++		"message": "Git repositories were found that were previously closed.\n[Reopen Closed Repositories](command:git.reopenClosedRepositories)\nTo learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm).",
  		"comment": [
  			"{Locked='](command:git.reopenClosedRepositories'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -363,8 +363,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
-@@ -403,9 +403,9 @@
- 		"message": "You can clone a repository locally.\n[Clone Repository](command:git.clone 'Clone a repository once the git extension has activated')",
+@@ -422,9 +422,9 @@
+ 		"message": "You can clone a repository locally.\n[Clone Repository](command:git.clone 'Clone a repository once the Git extension has activated')",
  		"comment": [
  			"{Locked='](command:git.clone'}",
 -			"Do not translate the 'command:*' part inside of the '(..)'. It is an internal command syntax for VS Code",
@@ -372,8 +372,8 @@ Index: sagemaker-code-editor/vscode/extensions/git/package.nls.json
  			"Please make sure there is no space between the right bracket and left parenthesis:  ]( this is an internal syntax for links"
  		]
  	},
--	"view.workbench.learnMore": "To learn more about how to use git and source control in VS Code [read our docs](https://aka.ms/vscode-scm)."
-+	"view.workbench.learnMore": "To learn more about how to use git and source control in Code-OSS [read the docs](https://aka.ms/vscode-scm)."
+-	"view.workbench.learnMore": "To learn more about how to use Git and source control in VS Code [read our docs](https://aka.ms/vscode-scm)."
++	"view.workbench.learnMore": "To learn more about how to use Git and source control in Code-OSS [read our docs](https://aka.ms/vscode-scm)."
  }
 Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
 ===================================================================
@@ -384,7 +384,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStart
  	{
  		id: 'SetupWeb',
 -		title: localize('gettingStarted.setupWeb.title', "Get Started with VS Code for the Web"),
--		description: localize('gettingStarted.setupWeb.description', "Discover the best customizations to make VS Code for the Web yours."),
+-		description: localize('gettingStarted.setupWeb.description', "Customize your editor, learn the basics, and start coding"),
 +		title: localize('gettingStarted.setupWeb.title', "Get Started with Code Editor"),
 +		description: localize('gettingStarted.setupWeb.description', "Discover the best customizations to make Code Editor yours."),
  		isFeatured: true,
