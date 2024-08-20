@@ -24,7 +24,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/preferences/common/
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/preferences/common/preferencesContribution.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/preferences/common/preferencesContribution.ts
-@@ -151,7 +151,7 @@ registry.registerConfiguration({
+@@ -147,7 +147,7 @@ registry.registerConfiguration({
  		'workbench.settings.enableNaturalLanguageSearch': {
  			'type': 'boolean',
  			'description': nls.localize('enableNaturalLanguageSettingsSearch', "Controls whether to enable the natural language search mode for settings. The natural language search is provided by a Microsoft online service."),
@@ -37,7 +37,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/services/assignment/common/
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/services/assignment/common/assignmentService.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/services/assignment/common/assignmentService.ts
-@@ -143,7 +143,7 @@ registry.registerConfiguration({
+@@ -146,7 +146,7 @@ registry.registerConfiguration({
  		'workbench.enableExperiments': {
  			'type': 'boolean',
  			'description': localize('workbench.enableExperiments', "Fetches experiments to run from a Microsoft online service."),

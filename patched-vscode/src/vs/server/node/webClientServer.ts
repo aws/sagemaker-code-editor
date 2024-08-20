@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createReadStream } from 'fs';
+import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
 import * as path from 'path';
 import * as http from 'http';
@@ -28,16 +29,15 @@ import { streamToBuffer } from 'vs/base/common/buffer';
 import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
 import { CharCode } from 'vs/base/common/charCode';
-import { getRemoteServerRootPath } from 'vs/platform/remote/common/remoteHosts';
 import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
 
-const textMimeType = {
+const textMimeType: { [ext: string]: string | undefined } = {
 	'.html': 'text/html',
 	'.js': 'text/javascript',
 	'.json': 'application/json',
 	'.css': 'text/css',
 	'.svg': 'image/svg+xml',
-} as { [ext: string]: string | undefined };
+};
 
 /**
  * Return an error to the client.
@@ -101,19 +101,23 @@ export class WebClientServer {
 	private readonly _staticRoute: string;
 	private readonly _callbackRoute: string;
 	private readonly _webExtensionRoute: string;
+	private readonly _idleRoute: string;
 
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
+		private readonly _basePath: string,
+		readonly serverRootPath: string,
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
 		@IProductService private readonly _productService: IProductService,
 	) {
 		this._webExtensionResourceUrlTemplate = this._productService.extensionsGallery?.resourceUrlTemplate ? URI.parse(this._productService.extensionsGallery.resourceUrlTemplate) : undefined;
-		const serverRootPath = getRemoteServerRootPath(_productService);
+
 		this._staticRoute = `${serverRootPath}/static`;
 		this._callbackRoute = `${serverRootPath}/callback`;
 		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
+		this._idleRoute = '/api/idle';
 	}
 
 	/**
@@ -128,8 +132,11 @@ export class WebClientServer {
 			if (pathname.startsWith(this._staticRoute) && pathname.charCodeAt(this._staticRoute.length) === CharCode.Slash) {
 				return this._handleStatic(req, res, parsedUrl);
 			}
-			if (pathname === '/') {
+			if (pathname === this._basePath) {
 				return this._handleRoot(req, res, parsedUrl);
+			}
+			if (pathname === this._idleRoute) {
+				return this._handleIdle(req, res);
 			}
 			if (pathname === this._callbackRoute) {
 				// callback support
@@ -262,7 +269,7 @@ export class WebClientServer {
 					newQuery[key] = parsedUrl.query[key];
 				}
 			}
-			const newLocation = url.format({ pathname: '/', query: newQuery });
+			const newLocation = url.format({ pathname: parsedUrl.pathname, query: newQuery });
 			responseHeaders['Location'] = newLocation;
 
 			res.writeHead(302, responseHeaders);
@@ -309,18 +316,18 @@ export class WebClientServer {
 		const base = relativeRoot(basePath)
 		const vscodeBase = relativePath(basePath)
 
-		const productConfiguration = <Partial<IProductConfiguration>>{
+		const productConfiguration = {
 			rootEndpoint: base,
 			embedderIdentifier: 'server-distro',
-			extensionsGallery: this._webExtensionResourceUrlTemplate ? {
+			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
 				...this._productService.extensionsGallery,
-				'resourceUrlTemplate': this._webExtensionResourceUrlTemplate.with({
+				resourceUrlTemplate: this._webExtensionResourceUrlTemplate.with({
 					scheme: 'http',
 					authority: remoteAuthority,
 					path: `${this._webExtensionRoute}/${this._webExtensionResourceUrlTemplate.authority}${this._webExtensionResourceUrlTemplate.path}`
 				}).toString(true)
 			} : undefined
-		};
+		} satisfies Partial<IProductConfiguration>;
 
 		if (!this._environmentService.isBuilt) {
 			try {
@@ -331,6 +338,7 @@ export class WebClientServer {
 
 		const workbenchWebConfiguration = {
 			remoteAuthority,
+			serverBasePath: this._basePath,
 			webviewEndpoint: vscodeBase + this._staticRoute + '/out/vs/workbench/contrib/webview/browser/pre',
 			userDataPath: this._environmentService.userDataPath,
 			_wrapWebWorkerExtHostInIframe,
@@ -371,11 +379,13 @@ export class WebClientServer {
 			return void res.end('Not found');
 		}
 
+		const webWorkerExtensionHostIframeScriptSHA = 'sha256-75NYUUvf+5++1WbfCZOV3PSWxBhONpaxwx+mkOFRv/Y=';
+
 		const cspDirectives = [
 			'default-src \'self\';',
 			'img-src \'self\' https: data: blob:;',
 			'media-src \'self\';',
-			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} 'sha256-fh3TwPMflhsEIpR8g1OYTIMVWhXTLcjQ9kh2tIpmv54=' ${useTestResolver ? '' : `http://${remoteAuthority}`};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
+			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} '${webWorkerExtensionHostIframeScriptSHA}' ${useTestResolver ? '' : `http://${remoteAuthority}`};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
 			'child-src \'self\';',
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
@@ -447,8 +457,28 @@ export class WebClientServer {
 		});
 		return void res.end(data);
 	}
-}
 
+	/**
+ 	 * Handles API requests to retrieve the last activity timestamp.
+   */
+	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		try {
+			const homeDirectory = process.env.HOME || process.env.USERPROFILE;
+			if (!homeDirectory) {
+				throw new Error('Home directory not found');
+			}
+
+			const idleFilePath = path.join(homeDirectory, '.code-editor-last-active-timestamp');
+			const data = await readFile(idleFilePath, 'utf8');
+
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify({ lastActiveTimestamp: data }));
+		} catch (error) {
+			serveError(req, res, 500, error.message)
+		}
+	}
+}
 
 /**
  * Remove extra slashes in a URL.
@@ -504,4 +534,15 @@ export const relativeRoot = (originalUrl: string): string => {
 export const relativePath = (originalUrl: string): string => {
 	const parts = originalUrl.split("?", 1)[0].split("/")
 	return normalizeUrlPath("./" + parts[parts.length - 1])
+}
+
+/**
+ * code-server serves Code using Express.  Express removes the base from the url
+ * and puts the original in `originalUrl` so we must use this to get the correct
+ * depth.  Code is not aware it is behind Express so the types do not match.  We
+ * may want to continue moving code into Code and eventually remove the Express
+ * wrapper or move the web server back into code-server.
+ */
+export const getOriginalUrl = (req: http.IncomingMessage): string => {
+	return (req as any).originalUrl || req.url
 }

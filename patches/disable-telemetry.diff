@@ -6,7 +6,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/telemetrySe
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/telemetry/common/telemetryService.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/telemetryService.ts
-@@ -204,7 +204,7 @@ Registry.as<IConfigurationRegistry>(Exte
+@@ -208,7 +208,7 @@ Registry.as<IConfigurationRegistry>(Exte
  	'properties': {
  		[TELEMETRY_SETTING_ID]: {
  			'type': 'string',
@@ -15,7 +15,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/telemetrySe
  			'enumDescriptions': [
  				localize('telemetry.telemetryLevel.default', "Sends usage data, errors, and crash reports."),
  				localize('telemetry.telemetryLevel.error', "Sends general error telemetry and crash reports."),
-@@ -212,7 +212,7 @@ Registry.as<IConfigurationRegistry>(Exte
+@@ -216,7 +216,7 @@ Registry.as<IConfigurationRegistry>(Exte
  				localize('telemetry.telemetryLevel.off', "Disables all product telemetry.")
  			],
  			'markdownDescription': getTelemetryLevelSettingDescription(),
@@ -28,7 +28,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/electron-sandbox/desktop.co
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/electron-sandbox/desktop.contribution.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/electron-sandbox/desktop.contribution.ts
-@@ -270,7 +270,7 @@ import { applicationConfigurationNodeBas
+@@ -288,7 +288,7 @@ import { MAX_ZOOM_LEVEL, MIN_ZOOM_LEVEL
  			'telemetry.enableCrashReporter': {
  				'type': 'boolean',
  				'description': localize('telemetry.enableCrashReporting', "Enable crash reports to be collected. This helps us improve stability. \nThis option requires restart to take effect."),
@@ -41,7 +41,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/1dsAppender
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/telemetry/common/1dsAppender.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/1dsAppender.ts
-@@ -17,8 +17,8 @@ export interface IAppInsightsCore {
+@@ -18,8 +18,8 @@ export interface IAppInsightsCore {
  	unload(isAsync: boolean, unloadComplete: (unloadState: ITelemetryUnloadState) => void): void;
  }
  
@@ -51,4 +51,4 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/1dsAppender
 +const endpointHealthUrl = 'https://0.0.0.0/ping';
  
  async function getClient(instrumentationKey: string, addInternalFlag?: boolean, xhrOverride?: IXHROverride): Promise<IAppInsightsCore> {
- 	const oneDs = await import('@microsoft/1ds-core-js');
+ 	const oneDs = await importAMDNodeModule<typeof import('@microsoft/1ds-core-js')>('@microsoft/1ds-core-js', 'dist/ms.core.js');

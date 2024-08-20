@@ -40,6 +40,8 @@ const dirs = [
 	'extensions/php-language-features',
 	'extensions/references-view',
 	'extensions/sagemaker-extension',
+	'extensions/sagemaker-idle-extension',
+	'extensions/sagemaker-terminal-crash-mitigation',
 	'extensions/search-result',
 	'extensions/simple-browser',
 	'extensions/tunnel-forwarding',
@@ -53,6 +55,7 @@ const dirs = [
 	'test/integration/browser',
 	'test/monaco',
 	'test/smoke',
+	'.vscode/extensions/vscode-selfhost-test-provider',
 ];
 
 if (fs.existsSync(`${__dirname}/../../.build/distro/npm`)) {

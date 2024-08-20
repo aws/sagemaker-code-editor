@@ -1,0 +1,43 @@
+{
+  "name": "sagemaker-idle-extension",
+  "displayName": "Sagemaker Idle Extension",
+  "description": "Expose an API called /idle that returns latest activity timestamp",
+  "extensionKind": [
+    "workspace"
+  ],
+  "version": "1.0.0",
+  "publisher": "sagemaker",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "main": "./out/extension",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Sagemaker Idle Extension",
+      "properties": {}
+    },
+    "commands": []
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:sagemaker-idle-extension",
+    "watch": "npm run build-preview && gulp watch-extension:sagemaker-idle-extension",
+    "vscode:prepublish": "npm run build-ext",
+    "build-ext": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:sagemaker-idle-extension ./tsconfig.json"
+  },
+  "dependencies": {},
+  "repository": {}
+}
