@@ -23,7 +23,7 @@ This script will:
 
 ## Local Setup
 
-- Install Prerequisite tools described [here](https://web.archive.org/web/20231012223533/https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites) for your operating system.
+- Install Prerequisite tools described [here](https://web.archive.org/web/20240711074020/https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites) for your operating system.
 - Run `sh ./scripts/install.sh`
 - Run `yarn watch` from within the `vscode` folder
 - Open a new terminal and run `./vscode/scripts/code-server.sh --launch`
