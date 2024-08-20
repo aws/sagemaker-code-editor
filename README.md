@@ -21,6 +21,16 @@ This script will:
 - runs `./scripts/copy-resource.sh` that will copy patched version of code - oss from `./vscode` into `./patched-vscode` folder along with icon(s) and svg(s) from `./resources` folder
 - runs `yarn install` and downloads built in extensions on patched submodule
 
+Usage:
+```bash
+Usage: install.sh [-t <VERSION>] [-v] [-h]
+
+Otions:
+  -t <VERSION>    Create a tarball with the specified version
+  -v              Enable verbose output
+  -h              Show this help message
+```
+
 ## Local Setup
 
 - Install Prerequisite tools described [here](https://web.archive.org/web/20240711074020/https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites) for your operating system.
