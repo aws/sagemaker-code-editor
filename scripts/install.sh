@@ -79,7 +79,7 @@ fi
 
 # Copy resources
 printf "\n======== Copy resources ========\n"
-sh ${PROJ_ROOT}/scripts/copy-resources.sh
+${PROJ_ROOT}/scripts/copy-resources.sh
 
 # Delete node_modules to prevent node-gyp build error
 printf "\n======== Deleting vscode/node_modules ========\n"
