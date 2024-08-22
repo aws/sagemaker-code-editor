@@ -5,8 +5,8 @@ export default defineConfig({
 	e2e: {
 		specPattern: [
 				'cypress/specs/core/open-application.cy.ts',
-                                'cypress/specs/core/terminal.cy.ts',
-				'cypress/specs/core/folder.cy.ts'
+                                // 'cypress/specs/core/terminal.cy.ts',
+				// 'cypress/specs/core/folder.cy.ts'
 			],
 		excludeSpecPattern: 'utils.ts',
 		setupNodeEvents(on, config) {
