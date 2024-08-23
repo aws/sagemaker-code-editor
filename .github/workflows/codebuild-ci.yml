@@ -16,6 +16,8 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     steps:
+      - name: Test ARN
+        run: echo "${{ secrets.AWS_CODE_BUILD_ROLE_ARN }}"
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
