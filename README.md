@@ -44,19 +44,17 @@ Follow the previous steps to patch and build the project.
 Use the `./scripts/test.sh` script for testing.
 
 ```
-Usage: test.sh --website='<WEBSITE-URL>' [OPTIONS]
-
-Required:
-    --website='<WEBSITE-URL>'     URL of the Code Editor instance to test.
+Usage: test.sh [OPTIONS]
 
 Options:
-    -u|--unit-test                Run OSS unit tests.
-    -i|--integ-test               Run OSS integration tests.
-    -s|--style-check              Run OSS style check.
-    -c|--cypress-integ-test       Run Code Editor UI tests.
-    -l|--local                    Run Code Editor UI tests against a local instance (requires -c).
-    -n|--no-patches               Skip automatic patching of OSS.
-    -h|--help                     Show this help message and exit.
+    -w '<WEBSITE-URL>'|--website='<WEBSITE_URL>'        URL of the Code Editor instance to test (default: http://localhost:9888).
+    -u|--unit-test                                      Run OSS unit tests.
+    -i|--integ-test                                     Run OSS integration tests.
+    -s|--style-check                                    Run OSS style check.
+    -c|--cypress-integ-test                             Run Code Editor UI tests.
+    -l|--local                                          Run Code Editor UI tests against a local instance (requires -c).
+    -n|--no-patches                                     Skip automatic patching of OSS.
+    -h|--help                                           Show this help message and exit.
 ```
 ***Note***: make sure you have the `'`quotes`'` around the website url.
 
