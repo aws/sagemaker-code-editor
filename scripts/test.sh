@@ -2,13 +2,10 @@
 
 usage() {
     printf """
-Usage: $(basename $0) --website='<WEBSITE-URL>' [OPTIONS]
-
-Required:
-    --website='<WEBSITE-URL>'     URL of the Code Editor instance to test.
+Usage: $(basename $0) [OPTIONS]
 
 Options:
-    -w '<WEBSITE-URL>'| --website='<WEBSITE_URL>'       URL of the Code Editor instance to test.
+    -w '<WEBSITE-URL>'|--website='<WEBSITE_URL>'        URL of the Code Editor instance to test (default: http://localhost:9888).
     -u|--unit-test                                      Run OSS unit tests.
     -i|--integ-test                                     Run OSS integration tests.
     -s|--style-check                                    Run OSS style check.
