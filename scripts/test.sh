@@ -16,6 +16,8 @@ Options:
 """
 }
 
+echo "hello world"
+
 # Set current project root
 PROJ_ROOT=$(pwd)
 
