@@ -156,7 +156,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +let terminalActivityInterval: NodeJS.Timeout | undefined
 +const LOG_PREFIX = "[sagemaker-idle-extension]"
 +const CHECK_INTERVAL = 60000; // 60 seconds interval
-+
++[][][];jalskdjf;alksjdf
 +export function activate(context: vscode.ExtensionContext) {
 +	initializeIdleFilePath();
 +	registerEventListeners(context);
