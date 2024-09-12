@@ -20,10 +20,10 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -330,6 +330,7 @@ export class WebClientServer {
+@@ -332,6 +332,7 @@ export class WebClientServer {
  		const workbenchWebConfiguration = {
  			remoteAuthority,
- 			serverBasePath: this._basePath,
+ 			webviewEndpoint: vscodeBase + this._staticRoute + '/out/vs/workbench/contrib/webview/browser/pre',
 +			userDataPath: this._environmentService.userDataPath,
  			_wrapWebWorkerExtHostInIframe,
  			developmentOptions: { enableSmokeTestDriver: this._environmentService.args['enable-smoke-test-driver'] ? true : undefined, logLevel: this._logService.getLevel() },
@@ -32,7 +32,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/web.api.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/browser/web.api.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/browser/web.api.ts
-@@ -298,6 +298,11 @@ export interface IWorkbenchConstructionO
+@@ -276,6 +276,11 @@ export interface IWorkbenchConstructionO
  	 */
  	readonly configurationDefaults?: Record<string, any>;
  

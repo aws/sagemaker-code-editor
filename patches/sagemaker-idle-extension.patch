@@ -269,10 +269,10 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/gulpfile.extensions.js
 +++ sagemaker-code-editor/vscode/build/gulpfile.extensions.js
-@@ -59,6 +59,7 @@ const compilations = [
- 	'extensions/references-view/tsconfig.json',
+@@ -61,6 +61,7 @@ const compilations = [
  	'extensions/search-result/tsconfig.json',
  	'extensions/simple-browser/tsconfig.json',
+ 	'extensions/sagemaker-extension/tsconfig.json',
 +	'extensions/sagemaker-idle-extension/tsconfig.json',
  	'extensions/tunnel-forwarding/tsconfig.json',
  	'extensions/typescript-language-features/test-workspace/tsconfig.json',
@@ -281,10 +281,10 @@ Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
 +++ sagemaker-code-editor/vscode/build/npm/dirs.js
-@@ -38,6 +38,7 @@ const dirs = [
- 	'extensions/npm',
+@@ -40,6 +40,7 @@ const dirs = [
  	'extensions/php-language-features',
  	'extensions/references-view',
+ 	'extensions/sagemaker-extension',
 +	'extensions/sagemaker-idle-extension',
  	'extensions/search-result',
  	'extensions/simple-browser',
@@ -296,12 +296,12 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 @@ -4,6 +4,7 @@
   *--------------------------------------------------------------------------------------------*/
  
- import { createReadStream, promises } from 'fs';
+ import { createReadStream } from 'fs';
 +import {readFile } from 'fs/promises';
+ import { Promises } from 'vs/base/node/pfs';
  import * as path from 'path';
  import * as http from 'http';
- import * as url from 'url';
-@@ -101,6 +102,7 @@ export class WebClientServer {
+@@ -100,6 +101,7 @@ export class WebClientServer {
  	private readonly _staticRoute: string;
  	private readonly _callbackRoute: string;
  	private readonly _webExtensionRoute: string;
@@ -309,7 +309,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  	constructor(
  		private readonly _connectionToken: ServerConnectionToken,
-@@ -117,6 +119,7 @@ export class WebClientServer {
+@@ -115,6 +117,7 @@ export class WebClientServer {
  		this._staticRoute = `${serverRootPath}/static`;
  		this._callbackRoute = `${serverRootPath}/callback`;
  		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
@@ -317,7 +317,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  	}
  
  	/**
-@@ -134,6 +137,9 @@ export class WebClientServer {
+@@ -132,6 +135,9 @@ export class WebClientServer {
  			if (pathname === this._basePath) {
  				return this._handleRoot(req, res, parsedUrl);
  			}
@@ -327,7 +327,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  			if (pathname === this._callbackRoute) {
  				// callback support
  				return this._handleCallback(res);
-@@ -468,4 +474,25 @@ export class WebClientServer {
+@@ -451,6 +457,27 @@ export class WebClientServer {
  		});
  		return void res.end(data);
  	}
@@ -353,3 +353,5 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 +		}
 +	}
  }
+ 
+ /**
