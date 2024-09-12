@@ -69,7 +69,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/web.main.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/browser/web.main.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/browser/web.main.ts
-@@ -95,6 +95,7 @@ import { TunnelSource } from 'vs/workbench/services/re
+@@ -96,6 +96,7 @@ import { ISecretStorageService } from 'v
  import { TunnelSource } from 'vs/workbench/services/remote/common/tunnelModel';
  import { mainWindow } from 'vs/base/browser/window';
  import { INotificationService, Severity } from 'vs/platform/notification/common/notification';
@@ -77,16 +77,16 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/web.main.ts
  
  export class BrowserMain extends Disposable {
  
-@@ -129,6 +130,9 @@ export class BrowserMain extends Disposable {
- 
+@@ -131,6 +132,9 @@ export class BrowserMain extends Disposa
  		// Startup
  		const instantiationService = workbench.startup();
-+
+ 
 +		// Create instance of SagemakerServerClient
 +		this._register(instantiationService.createInstance(SagemakerServerClient));
- 
++
  		// Window
  		this._register(instantiationService.createInstance(BrowserWindow));
+ 
 Index: sagemaker-code-editor/vscode/product.json
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/product.json
@@ -100,14 +100,14 @@ Index: sagemaker-code-editor/vscode/product.json
  	"applicationName": "code-oss",
  	"dataFolderName": ".vscode-oss",
  	"win32MutexName": "vscodeoss",
-@@ -34,52 +34,16 @@
+@@ -32,53 +32,17 @@
  	"urlProtocol": "code-oss",
  	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
  	"builtInExtensions": [
 -		{
 -			"name": "ms-vscode.js-debug-companion",
--			"version": "1.1.2",
--			"sha256": "e034b8b41beb4e97e02c70f7175bd88abe66048374c2bd629f54bb33354bc2aa",
+-			"version": "1.1.3",
+-			"sha256": "7380a890787452f14b2db7835dfa94de538caf358ebc263f9d46dd68ac52de93",
 -			"repo": "https://github.com/microsoft/vscode-js-debug-companion",
 -			"metadata": {
 -				"id": "99cb0b7f-7354-4278-b8da-6cc79972169d",
@@ -122,8 +122,8 @@ Index: sagemaker-code-editor/vscode/product.json
 -		},
 -		{
 -			"name": "ms-vscode.js-debug",
--			"version": "1.90.0",
--			"sha256": "1317dd7d1ac50641c1534a3e957ecbc94349f4fbd897acb916da11eea3208a66",
+-			"version": "1.93.0",
+-			"sha256": "9339cb8e6b77f554df54d79e71f533279cb76b0f9b04c207f633bfd507442b6a",
 -			"repo": "https://github.com/microsoft/vscode-js-debug",
 -			"metadata": {
 -				"id": "25629058-ddac-4e17-abba-74678e126c5d",
@@ -152,6 +152,7 @@ Index: sagemaker-code-editor/vscode/product.json
 -				"publisherDisplayName": "Microsoft"
 -			}
 -		}
+-	]
 +	],
 +	"extensionsGallery": {
 +		"serviceUrl": "https://open-vsx.org/vscode/gallery",
@@ -164,37 +165,13 @@ Index: sagemaker-code-editor/vscode/product.json
 +	},
 +	"linkProtectionTrustedDomains": [
 +		"https://open-vsx.org"
- 	]
-Index: sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
-===================================================================
---- sagemaker-code-editor.orig/vscode/src/vs/platform/product/common/product.ts
-+++ sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
-@@ -59,15 +59,17 @@ else {
- 	if (Object.keys(product).length === 0) {
- 		Object.assign(product, {
- 			version: '1.90.0-dev',
--			nameShort: 'Code - OSS Dev',
--			nameLong: 'Code - OSS Dev',
-+			nameShort: 'CodeEditor',
-+			nameLong: 'Code Editor',
- 			applicationName: 'code-oss',
- 			dataFolderName: '.vscode-oss',
-+			commit: "hellocommit",
-+			date: "hellodate",
- 			urlProtocol: 'code-oss',
- 			reportIssueUrl: 'https://github.com/microsoft/vscode/issues/new',
- 			licenseName: 'MIT',
- 			licenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
--			serverLicenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt'
-+			serverLicenseUrl: 'https://github.com/microsoft/vscode/blob/main/LICENSE.txt',
- 		});
- 	}
++ 	]
  }
 Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
-@@ -779,8 +779,8 @@ export class GettingStartedPage extends EditorPane {
+@@ -800,8 +800,8 @@ export class GettingStartedPage extends
  		}));
  
  		const header = $('.header', {},
@@ -379,7 +356,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStart
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
-@@ -257,8 +257,8 @@ export const walkthroughs: GettingStartedWalkthroughCo
+@@ -310,8 +310,8 @@ export const walkthroughs: GettingStarte
  
  	{
  		id: 'SetupWeb',
