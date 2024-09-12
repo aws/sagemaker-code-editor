@@ -255,10 +255,10 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/gulpfile.extensions.js
 +++ sagemaker-code-editor/vscode/build/gulpfile.extensions.js
-@@ -59,6 +59,7 @@ const compilations = [
- 	'extensions/references-view/tsconfig.json',
+@@ -61,6 +61,7 @@ const compilations = [
  	'extensions/search-result/tsconfig.json',
  	'extensions/simple-browser/tsconfig.json',
+ 	'extensions/sagemaker-extension/tsconfig.json',
 +	'extensions/sagemaker-idle-extension/tsconfig.json',
  	'extensions/tunnel-forwarding/tsconfig.json',
  	'extensions/typescript-language-features/test-workspace/tsconfig.json',
@@ -267,10 +267,10 @@ Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
 +++ sagemaker-code-editor/vscode/build/npm/dirs.js
-@@ -38,6 +38,7 @@ const dirs = [
- 	'extensions/npm',
+@@ -40,6 +40,7 @@ const dirs = [
  	'extensions/php-language-features',
  	'extensions/references-view',
+ 	'extensions/sagemaker-extension',
 +	'extensions/sagemaker-idle-extension',
  	'extensions/search-result',
  	'extensions/simple-browser',
@@ -336,3 +336,5 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 + 		}
 + 	}
  }
+ 
+ /**
