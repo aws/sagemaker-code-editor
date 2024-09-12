@@ -77,16 +77,16 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/web.main.ts
  
  export class BrowserMain extends Disposable {
  
-@@ -129,6 +130,9 @@ export class BrowserMain extends Disposable {
- 
+@@ -131,6 +132,9 @@ export class BrowserMain extends Disposa
  		// Startup
  		const instantiationService = workbench.startup();
-+
+ 
 +		// Create instance of SagemakerServerClient
 +		this._register(instantiationService.createInstance(SagemakerServerClient));
- 
++
  		// Window
  		this._register(instantiationService.createInstance(BrowserWindow));
+ 
 Index: sagemaker-code-editor/vscode/product.json
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/product.json
@@ -100,7 +100,7 @@ Index: sagemaker-code-editor/vscode/product.json
  	"applicationName": "code-oss",
  	"dataFolderName": ".vscode-oss",
  	"win32MutexName": "vscodeoss",
-@@ -34,52 +34,16 @@
+@@ -32,53 +32,17 @@
  	"urlProtocol": "code-oss",
  	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
  	"builtInExtensions": [
@@ -152,6 +152,7 @@ Index: sagemaker-code-editor/vscode/product.json
 -				"publisherDisplayName": "Microsoft"
 -			}
 -		}
+-	]
 +	],
 +	"extensionsGallery": {
 +		"serviceUrl": "https://open-vsx.org/vscode/gallery",
@@ -194,7 +195,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStart
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
-@@ -779,8 +779,8 @@ export class GettingStartedPage extends EditorPane {
+@@ -800,8 +800,8 @@ export class GettingStartedPage extends
  		}));
  
  		const header = $('.header', {},
@@ -233,7 +234,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStart
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
-@@ -257,8 +257,8 @@ export const walkthroughs: GettingStartedWalkthroughCo
+@@ -310,8 +310,8 @@ export const walkthroughs: GettingStarte
  
  	{
  		id: 'SetupWeb',
