@@ -69,15 +69,6 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/webview/browser/pre
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/webview/browser/pre/index.html
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/webview/browser/pre/index.html
-@@ -5,7 +5,7 @@
- 	<meta charset="UTF-8">
-
- 	<meta http-equiv="Content-Security-Policy"
--		content="default-src 'none'; script-src 'sha256-bQPwjO6bLiyf6v9eDVtAI67LrfonA1w49aFkRXBy4/g=' 'self'; frame-src 'self'; style-src 'unsafe-inline';">
-+		content="default-src 'none'; script-src 'sha256-R3BsSkqy7qFbvWSmwr7WqT1eg6Sq4zSe0uIlrUQ4EKE=' 'self'; frame-src 'self'; style-src 'unsafe-inline';">
-
- 	<!-- Disable pinch zooming -->
- 	<meta name="viewport"
 @@ -344,6 +344,12 @@
  
  				const hostname = location.hostname;
@@ -110,17 +101,8 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/webview/browser/pre
  					throw new Error(`'crypto.subtle' is not available so webviews will not work. This is likely because the editor is not running in a secure context (https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts).`);
 Index: sagemaker-code-editor/vscode/src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
 ===================================================================
---- sagemaker-code-editor.orig/vscode/src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/servicesx/extensions/worker/webWorkerExtensionHostIframe.html
 +++ sagemaker-code-editor/vscode/src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
-@@ -4,7 +4,7 @@
- 		<meta http-equiv="Content-Security-Policy" content="
- 			default-src 'none';
- 			child-src 'self' data: blob:;
--			script-src 'self' 'unsafe-eval' 'sha256-75NYUUvf+5++1WbfCZOV3PSWxBhONpaxwx+mkOFRv/Y=' https:;
-+			script-src 'self' 'unsafe-eval' 'sha256-c7vPrYRaSLDtFSrI4CuHYgBQ3a4c4x2LSm/LefSZADQ=' https:;
- 			connect-src 'self' https: wss: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*;"/>
- 	</head>
- 	<body>
 @@ -23,6 +23,13 @@
  			// validation not requested
  			return start();

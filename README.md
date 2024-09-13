@@ -67,7 +67,8 @@ sh ./scripts/test.sh --website='http://localhost:9090' -uicl
 This will run the OSS unit and integration tests, and the Cypress integration tests for a local Code Editor instance at `localhost:9090`. 
 
 ## Publishing Releases
-To publish a new release using the GitHub Action, push a tag that starts with `v`, e.g. `v1.5.0`. This will trigger an Action to create a tarball and publish it in a release with the tag `v1.5.0`. Currently the Action will require manual approval from @aws-pangestu, @aws-navinns, or @aws-asolidu.
+To publish a new release using the GitHub Action, open a new branch the open a PR, the PR should be reviewed and manually approval from @aws-pangestu, @aws-navinns, or @aws-asolidu.
+Once PR is approved, push a tag that starts with `v`, e.g. `v1.5.0`. This will trigger an Action to create a tarball and publish it in a release with the tag `v1.5.0`. Currently the Action will require. manually approval from @aws-pangestu, @aws-navinns, or @aws-asolidu.
 
 ### Future
 We hope to extend this Action to also automatically update the CodeEditor feedstock repository.
