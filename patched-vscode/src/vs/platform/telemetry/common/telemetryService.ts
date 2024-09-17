@@ -208,7 +208,7 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfigurat
 	'properties': {
 		[TELEMETRY_SETTING_ID]: {
 			'type': 'string',
-			'enum': [TelemetryConfiguration.OFF],
+			'enum': [TelemetryConfiguration.ON, TelemetryConfiguration.ERROR, TelemetryConfiguration.CRASH, TelemetryConfiguration.OFF],
 			'enumDescriptions': [
 				localize('telemetry.telemetryLevel.default', "Sends usage data, errors, and crash reports."),
 				localize('telemetry.telemetryLevel.error', "Sends general error telemetry and crash reports."),
@@ -216,7 +216,7 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfigurat
 				localize('telemetry.telemetryLevel.off', "Disables all product telemetry.")
 			],
 			'markdownDescription': getTelemetryLevelSettingDescription(),
-			'default': TelemetryConfiguration.OFF,
+			'default': TelemetryConfiguration.ON,
 			'restricted': true,
 			'scope': ConfigurationScope.APPLICATION,
 			'tags': ['usesOnlineServices', 'telemetry']

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
+import assert from 'assert';
 import { Emitter, Event } from 'vs/base/common/event';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import { ResourceMap } from 'vs/base/common/map';
@@ -73,7 +73,8 @@ suite('notebookCellDiagnostics', () => {
 			isDefault: true,
 			locations: [ChatAgentLocation.Editor],
 			metadata: {},
-			slashCommands: []
+			slashCommands: [],
+			disambiguation: [],
 		};
 		const chatAgentService = new class extends mock<IChatAgentService>() {
 			override getAgents(): IChatAgentData[] {

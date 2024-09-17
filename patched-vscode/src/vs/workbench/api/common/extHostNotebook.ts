@@ -36,7 +36,7 @@ import { IExtHostSearch } from 'vs/workbench/api/common/extHostSearch';
 import { CellSearchModel } from 'vs/workbench/contrib/search/common/cellSearchModel';
 import { INotebookCellMatchNoModel, INotebookFileMatchNoModel, IRawClosedNotebookFileMatch, genericCellMatchesToTextSearchMatches } from 'vs/workbench/contrib/search/common/searchNotebookHelpers';
 import { NotebookPriorityInfo } from 'vs/workbench/contrib/search/common/search';
-import { globMatchesResource } from 'vs/workbench/services/editor/common/editorResolverService';
+import { globMatchesResource, RegisteredEditorPriority } from 'vs/workbench/services/editor/common/editorResolverService';
 import { ILogService } from 'vs/platform/log/common/log';
 
 export class ExtHostNotebookController implements ExtHostNotebookShape {
@@ -145,8 +145,6 @@ export class ExtHostNotebookController implements ExtHostNotebookShape {
 		return result;
 	}
 
-
-
 	private static _convertNotebookRegistrationData(extension: IExtensionDescription, registration: vscode.NotebookRegistrationData | undefined): INotebookContributionData | undefined {
 		if (!registration) {
 			return;
@@ -163,7 +161,7 @@ export class ExtHostNotebookController implements ExtHostNotebookShape {
 			providerDisplayName: extension.displayName || extension.name,
 			displayName: registration.displayName,
 			filenamePattern: viewOptionsFilenamePattern,
-			exclusive: registration.exclusive || false
+			priority: registration.exclusive ? RegisteredEditorPriority.exclusive : undefined
 		};
 	}
 
@@ -205,28 +203,25 @@ export class ExtHostNotebookController implements ExtHostNotebookShape {
 		return assertIsDefined(document?.apiNotebook);
 	}
 
-
-	async showNotebookDocument(notebookOrUri: vscode.NotebookDocument | URI, options?: vscode.NotebookDocumentShowOptions): Promise<vscode.NotebookEditor> {
-
-		if (URI.isUri(notebookOrUri)) {
-			notebookOrUri = await this.openNotebookDocument(notebookOrUri);
-		}
-
+	async showNotebookDocument(notebook: vscode.NotebookDocument, options?: vscode.NotebookDocumentShowOptions): Promise<vscode.NotebookEditor> {
 		let resolvedOptions: INotebookDocumentShowOptions;
 		if (typeof options === 'object') {
 			resolvedOptions = {
 				position: typeConverters.ViewColumn.from(options.viewColumn),
 				preserveFocus: options.preserveFocus,
 				selections: options.selections && options.selections.map(typeConverters.NotebookRange.from),
-				pinned: typeof options.preview === 'boolean' ? !options.preview : undefined
+				pinned: typeof options.preview === 'boolean' ? !options.preview : undefined,
+				label: options?.label
 			};
 		} else {
 			resolvedOptions = {
-				preserveFocus: false
+				preserveFocus: false,
+				pinned: true
 			};
 		}
 
-		const editorId = await this._notebookEditorsProxy.$tryShowNotebookDocument(notebookOrUri.uri, notebookOrUri.notebookType, resolvedOptions);
+		const viewType = options?.asRepl ? 'repl' : notebook.notebookType;
+		const editorId = await this._notebookEditorsProxy.$tryShowNotebookDocument(notebook.uri, viewType, resolvedOptions);
 		const editor = editorId && this._editors.get(editorId)?.apiEditor;
 
 		if (editor) {
@@ -234,9 +229,9 @@ export class ExtHostNotebookController implements ExtHostNotebookShape {
 		}
 
 		if (editorId) {
-			throw new Error(`Could NOT open editor for "${notebookOrUri.uri.toString()}" because another editor opened in the meantime.`);
+			throw new Error(`Could NOT open editor for "${notebook.uri.toString()}" because another editor opened in the meantime.`);
 		} else {
-			throw new Error(`Could NOT open editor for "${notebookOrUri.uri.toString()}".`);
+			throw new Error(`Could NOT open editor for "${notebook.uri.toString()}".`);
 		}
 	}
 

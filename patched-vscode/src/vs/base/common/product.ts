@@ -55,7 +55,6 @@ export type ExtensionVirtualWorkspaceSupport = {
 };
 
 export interface IProductConfiguration {
-	readonly rootEndpoint?: string
 	readonly version: string;
 	readonly date?: string;
 	readonly quality?: string;
@@ -83,6 +82,7 @@ export interface IProductConfiguration {
 	readonly webEndpointUrlTemplate?: string;
 	readonly webviewContentExternalBaseUrlTemplate?: string;
 	readonly target?: string;
+	readonly nlsCoreBaseUrl?: string;
 
 	readonly settingsSearchBuildId?: number;
 	readonly settingsSearchUrl?: string;
@@ -160,7 +160,6 @@ export interface IProductConfiguration {
 	readonly tunnelApplicationConfig?: ITunnelApplicationConfig;
 
 	readonly npsSurveyUrl?: string;
-	readonly cesSurveyUrl?: string;
 	readonly surveys?: readonly ISurveyData[];
 
 	readonly checksums?: { [path: string]: string };
@@ -174,6 +173,7 @@ export interface IProductConfiguration {
 	readonly extensionPointExtensionKind?: { readonly [extensionPointId: string]: ('ui' | 'workspace' | 'web')[] };
 	readonly extensionSyncedKeys?: { readonly [extensionId: string]: string[] };
 
+	readonly extensionsEnabledWithApiProposalVersion?: string[];
 	readonly extensionEnabledApiProposals?: { readonly [extensionId: string]: string[] };
 	readonly extensionUntrustedWorkspaceSupport?: { readonly [extensionId: string]: ExtensionUntrustedWorkspaceSupport };
 	readonly extensionVirtualWorkspacesSupport?: { readonly [extensionId: string]: ExtensionVirtualWorkspaceSupport };
@@ -190,7 +190,6 @@ export interface IProductConfiguration {
 	readonly commonlyUsedSettings?: string[];
 	readonly aiGeneratedWorkspaceTrust?: IAiGeneratedWorkspaceTrust;
 	readonly gitHubEntitlement?: IGitHubEntitlement;
-	readonly chatWelcomeView?: IChatWelcomeView;
 	readonly chatParticipantRegistry?: string;
 }
 
@@ -207,6 +206,7 @@ export interface IExtensionRecommendations {
 
 export interface ISettingsEditorOpenCondition {
 	readonly prerelease?: boolean | string;
+	readonly descriptionOverride?: string;
 }
 
 export interface IExtensionRecommendationCondition {
@@ -304,10 +304,4 @@ export interface IGitHubEntitlement {
 	enablementKey: string;
 	confirmationMessage: string;
 	confirmationAction: string;
-}
-
-export interface IChatWelcomeView {
-	welcomeViewId: string;
-	welcomeViewTitle: string;
-	welcomeViewContent: string;
 }

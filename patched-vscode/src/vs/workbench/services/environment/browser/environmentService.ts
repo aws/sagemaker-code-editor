@@ -102,14 +102,7 @@ export class BrowserWorkbenchEnvironmentService implements IBrowserWorkbenchEnvi
 	get logFile(): URI { return joinPath(this.windowLogsPath, 'window.log'); }
 
 	@memoize
-	get userRoamingDataHome(): URI { return joinPath(URI.file(this.userDataPath).with({ scheme: Schemas.vscodeRemote }), 'User'); }
-
-	get userDataPath(): string {
-		if (!this.options.userDataPath) {
-			throw new Error('userDataPath was not provided to the browser');
-		}
-		return this.options.userDataPath;
-	}
+	get userRoamingDataHome(): URI { return URI.file('/User').with({ scheme: Schemas.vscodeUserData }); }
 
 	@memoize
 	get argvResource(): URI { return joinPath(this.userRoamingDataHome, 'argv.json'); }
@@ -232,7 +225,7 @@ export class BrowserWorkbenchEnvironmentService implements IBrowserWorkbenchEnvi
 
 	@memoize
 	get webviewExternalEndpoint(): string {
-		const endpoint = (this.options.webviewEndpoint && new URL(this.options.webviewEndpoint, window.location.toString()).toString())
+		const endpoint = this.options.webviewEndpoint
 			|| this.productService.webviewContentExternalBaseUrlTemplate
 			|| 'https://{{uuid}}.vscode-cdn.net/{{quality}}/{{commit}}/out/vs/workbench/contrib/webview/browser/pre/';
 
@@ -264,7 +257,7 @@ export class BrowserWorkbenchEnvironmentService implements IBrowserWorkbenchEnvi
 	get disableWorkspaceTrust(): boolean { return !this.options.enableWorkspaceTrust; }
 
 	@memoize
-	get lastActiveProfile(): string | undefined { return this.payload?.get('lastActiveProfile'); }
+	get profile(): string | undefined { return this.payload?.get('profile'); }
 
 	editSessionId: string | undefined = this.options.editSessionId;
 

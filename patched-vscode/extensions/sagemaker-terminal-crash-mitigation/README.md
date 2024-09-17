@@ -1,2 +1,0 @@
-# Terminal Crash Mitigation
-This extension addresses a critical issue where terminals fail to open. As of August 9, 2024, the root cause remains unidentified. The extension works by monitoring the creation of new terminals and detects if a terminal closes within 1 second of being opened. When this condition is met, it assumes the issue has occurred and attempts to mitigate it by terminating any background terminal processes. However, it will not terminate any terminal processes if there is an active terminal in the UI.
