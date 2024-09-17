@@ -3,9 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createReadStream } from 'fs';
-import {readFile } from 'fs/promises';
-import { Promises } from 'vs/base/node/pfs';
+import { createReadStream, promises } from 'fs';
 import * as path from 'path';
 import * as http from 'http';
 import * as url from 'url';
@@ -30,6 +28,8 @@ import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
 import { CharCode } from 'vs/base/common/charCode';
 import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
+import { isESM } from 'vs/base/common/amd';
+import { ICSSDevelopmentService } from 'vs/platform/cssDev/node/cssDevService';
 
 const textMimeType: { [ext: string]: string | undefined } = {
 	'.html': 'text/html',
@@ -56,7 +56,7 @@ export const enum CacheControl {
  */
 export async function serveFile(filePath: string, cacheControl: CacheControl, logService: ILogService, req: http.IncomingMessage, res: http.ServerResponse, responseHeaders: Record<string, string>): Promise<void> {
 	try {
-		const stat = await Promises.stat(filePath); // throws an error if file doesn't exist
+		const stat = await promises.stat(filePath); // throws an error if file doesn't exist
 		if (cacheControl === CacheControl.ETAG) {
 
 			// Check if file modified since
@@ -101,7 +101,6 @@ export class WebClientServer {
 	private readonly _staticRoute: string;
 	private readonly _callbackRoute: string;
 	private readonly _webExtensionRoute: string;
-	private readonly _idleRoute: string;
 
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
@@ -111,13 +110,13 @@ export class WebClientServer {
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
 		@IProductService private readonly _productService: IProductService,
+		@ICSSDevelopmentService private readonly _cssDevService: ICSSDevelopmentService
 	) {
 		this._webExtensionResourceUrlTemplate = this._productService.extensionsGallery?.resourceUrlTemplate ? URI.parse(this._productService.extensionsGallery.resourceUrlTemplate) : undefined;
 
 		this._staticRoute = `${serverRootPath}/static`;
 		this._callbackRoute = `${serverRootPath}/callback`;
 		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
-		this._idleRoute = '/api/idle';
 	}
 
 	/**
@@ -134,9 +133,6 @@ export class WebClientServer {
 			}
 			if (pathname === this._basePath) {
 				return this._handleRoot(req, res, parsedUrl);
-			}
-			if (pathname === this._idleRoute) {
-				return this._handleIdle(req, res);
 			}
 			if (pathname === this._callbackRoute) {
 				// callback support
@@ -228,7 +224,7 @@ export class WebClientServer {
 			return serveError(req, res, status, text || `Request failed with status ${status}`);
 		}
 
-		const responseHeaders: Record<string, string> = Object.create(null);
+		const responseHeaders: Record<string, string | string[]> = Object.create(null);
 		const setResponseHeader = (header: string) => {
 			const value = context.res.headers[header];
 			if (value) {
@@ -285,7 +281,7 @@ export class WebClientServer {
 		const remoteAuthority = (
 			useTestResolver
 				? 'test+test'
-				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host || window.location.host)
+				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host)
 		);
 		if (!remoteAuthority) {
 			return serveError(req, res, 400, `Bad request.`);
@@ -304,7 +300,7 @@ export class WebClientServer {
 
 		const resolveWorkspaceURI = (defaultLocation?: string) => defaultLocation && URI.file(path.resolve(defaultLocation)).with({ scheme: Schemas.vscodeRemote, authority: remoteAuthority });
 
-		const filePath = FileAccess.asFileUri(this._environmentService.isBuilt ? 'vs/code/browser/workbench/workbench.html' : 'vs/code/browser/workbench/workbench-dev.html').fsPath;
+		const filePath = FileAccess.asFileUri(`vs/code/browser/workbench/workbench${this._environmentService.isBuilt ? '' : '-dev'}.${isESM ? 'esm.' : ''}html`).fsPath;
 		const authSessionInfo = !this._environmentService.isBuilt && this._environmentService.args['github-auth'] ? {
 			id: generateUuid(),
 			providerId: 'github',
@@ -312,12 +308,7 @@ export class WebClientServer {
 			scopes: [['user:email'], ['repo']]
 		} : undefined;
 
-		const basePath: string = this._environmentService.args['base-path'] || "/"
-		const base = relativeRoot(basePath)
-		const vscodeBase = relativePath(basePath)
-
 		const productConfiguration = {
-			rootEndpoint: base,
 			embedderIdentifier: 'server-distro',
 			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
 				...this._productService.extensionsGallery,
@@ -331,7 +322,7 @@ export class WebClientServer {
 
 		if (!this._environmentService.isBuilt) {
 			try {
-				const productOverrides = JSON.parse((await Promises.readFile(join(APP_ROOT, 'product.overrides.json'))).toString());
+				const productOverrides = JSON.parse((await promises.readFile(join(APP_ROOT, 'product.overrides.json'))).toString());
 				Object.assign(productConfiguration, productOverrides);
 			} catch (err) {/* Ignore Error */ }
 		}
@@ -339,8 +330,6 @@ export class WebClientServer {
 		const workbenchWebConfiguration = {
 			remoteAuthority,
 			serverBasePath: this._basePath,
-			webviewEndpoint: vscodeBase + this._staticRoute + '/out/vs/workbench/contrib/webview/browser/pre',
-			userDataPath: this._environmentService.userDataPath,
 			_wrapWebWorkerExtHostInIframe,
 			developmentOptions: { enableSmokeTestDriver: this._environmentService.args['enable-smoke-test-driver'] ? true : undefined, logLevel: this._logService.getLevel() },
 			settingsSyncOptions: !this._environmentService.isBuilt && this._environmentService.args['enable-sync'] ? { enabled: true } : undefined,
@@ -351,20 +340,39 @@ export class WebClientServer {
 			callbackRoute: this._callbackRoute
 		};
 
-		const nlsBaseUrl = this._productService.extensionsGallery?.nlsBaseUrl;
+		const cookies = cookie.parse(req.headers.cookie || '');
+		const locale = cookies['vscode.nls.locale'] || req.headers['accept-language']?.split(',')[0]?.toLowerCase() || 'en';
+		let WORKBENCH_NLS_BASE_URL: string | undefined;
+		let WORKBENCH_NLS_URL: string;
+		if (!locale.startsWith('en') && this._productService.nlsCoreBaseUrl) {
+			WORKBENCH_NLS_BASE_URL = this._productService.nlsCoreBaseUrl;
+			WORKBENCH_NLS_URL = `${WORKBENCH_NLS_BASE_URL}${this._productService.commit}/${this._productService.version}/${locale}/nls.messages.js`;
+		} else {
+			WORKBENCH_NLS_URL = ''; // fallback will apply
+		}
+
 		const values: { [key: string]: string } = {
 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
 			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
-			WORKBENCH_WEB_BASE_URL: vscodeBase + this._staticRoute,
-			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
-			BASE: base,
-			VS_BASE: vscodeBase,
+			WORKBENCH_WEB_BASE_URL: this._staticRoute,
+			WORKBENCH_NLS_URL,
+			WORKBENCH_NLS_FALLBACK_URL: `${this._staticRoute}/out/nls.messages.js`
 		};
+
+		// DEV ---------------------------------------------------------------------------------------
+		// DEV: This is for development and enables loading CSS via import-statements via import-maps.
+		// DEV: The server needs to send along all CSS modules so that the client can construct the
+		// DEV: import-map.
+		// DEV ---------------------------------------------------------------------------------------
+		if (this._cssDevService.isEnabled) {
+			const cssModules = await this._cssDevService.getCssModules();
+			values['WORKBENCH_DEV_CSS_MODULES'] = JSON.stringify(cssModules);
+		}
 
 		if (useTestResolver) {
 			const bundledExtensions: { extensionPath: string; packageJSON: IExtensionManifest }[] = [];
 			for (const extensionPath of ['vscode-test-resolver', 'github-authentication']) {
-				const packageJSON = JSON.parse((await Promises.readFile(FileAccess.asFileUri(`${builtinExtensionsPath}/${extensionPath}/package.json`).fsPath)).toString());
+				const packageJSON = JSON.parse((await promises.readFile(FileAccess.asFileUri(`${builtinExtensionsPath}/${extensionPath}/package.json`).fsPath)).toString());
 				bundledExtensions.push({ extensionPath, packageJSON });
 			}
 			values['WORKBENCH_BUILTIN_EXTENSIONS'] = asJSON(bundledExtensions);
@@ -372,20 +380,22 @@ export class WebClientServer {
 
 		let data;
 		try {
-			const workbenchTemplate = (await Promises.readFile(filePath)).toString();
+			const workbenchTemplate = (await promises.readFile(filePath)).toString();
 			data = workbenchTemplate.replace(/\{\{([^}]+)\}\}/g, (_, key) => values[key] ?? 'undefined');
 		} catch (e) {
 			res.writeHead(404, { 'Content-Type': 'text/plain' });
 			return void res.end('Not found');
 		}
 
-		const webWorkerExtensionHostIframeScriptSHA = 'sha256-75NYUUvf+5++1WbfCZOV3PSWxBhONpaxwx+mkOFRv/Y=';
+		const webWorkerExtensionHostIframeScriptSHA = isESM ? 'sha256-2Q+j4hfT09+1+imS46J2YlkCtHWQt0/BE79PXjJ0ZJ8=' : 'sha256-V28GQnL3aYxbwgpV3yW1oJ+VKKe/PBSzWntNyH8zVXA=';
 
 		const cspDirectives = [
 			'default-src \'self\';',
 			'img-src \'self\' https: data: blob:;',
 			'media-src \'self\';',
-			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} '${webWorkerExtensionHostIframeScriptSHA}' ${useTestResolver ? '' : `http://${remoteAuthority}`};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
+			isESM ?
+				`script-src 'self' 'unsafe-eval' ${WORKBENCH_NLS_BASE_URL ?? ''} blob: 'nonce-1nline-m4p' ${this._getScriptCspHashes(data).join(' ')} '${webWorkerExtensionHostIframeScriptSHA}' 'sha256-/r7rqQ+yrxt57sxLuQ6AMYcy/lUpvAIzHjIJt/OeLWU=' ${useTestResolver ? '' : `http://${remoteAuthority}`};` : // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.esm.html
+				`script-src 'self' 'unsafe-eval' ${WORKBENCH_NLS_BASE_URL ?? ''} ${this._getScriptCspHashes(data).join(' ')} '${webWorkerExtensionHostIframeScriptSHA}' ${useTestResolver ? '' : `http://${remoteAuthority}`};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
 			'child-src \'self\';',
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
@@ -441,7 +451,7 @@ export class WebClientServer {
 	 */
 	private async _handleCallback(res: http.ServerResponse): Promise<void> {
 		const filePath = FileAccess.asFileUri('vs/code/browser/workbench/callback.html').fsPath;
-		const data = (await Promises.readFile(filePath)).toString();
+		const data = (await promises.readFile(filePath)).toString();
 		const cspDirectives = [
 			'default-src \'self\';',
 			'img-src \'self\' https: data: blob:;',
@@ -457,92 +467,4 @@ export class WebClientServer {
 		});
 		return void res.end(data);
 	}
-
-	/**
- 	 * Handles API requests to retrieve the last activity timestamp.
-   */
-	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-		try {
-			const homeDirectory = process.env.HOME || process.env.USERPROFILE;
-			if (!homeDirectory) {
-				throw new Error('Home directory not found');
-			}
-
-			const idleFilePath = path.join(homeDirectory, '.code-editor-last-active-timestamp');
-			const data = await readFile(idleFilePath, 'utf8');
-
-			res.statusCode = 200;
-			res.setHeader('Content-Type', 'application/json');
-			res.end(JSON.stringify({ lastActiveTimestamp: data }));
-		} catch (error) {
-			serveError(req, res, 500, error.message)
-		}
-	}
-}
-
-/**
- * Remove extra slashes in a URL.
- *
- * This is meant to fill the job of `path.join` so you can concatenate paths and
- * then normalize out any extra slashes.
- *
- * If you are using `path.join` you do not need this but note that `path` is for
- * file system paths, not URLs.
- */
-export const normalizeUrlPath = (url: string, keepTrailing = false): string => {
-	return url.replace(/\/\/+/g, "/").replace(/\/+$/, keepTrailing ? "/" : "")
-}
-
-/**
- * Get the relative path that will get us to the root of the page. For each
- * slash we need to go up a directory.  Will not have a trailing slash.
- *
- * For example:
- *
- * / => .
- * /foo => .
- * /foo/ => ./..
- * /foo/bar => ./..
- * /foo/bar/ => ./../..
- *
- * All paths must be relative in order to work behind a reverse proxy since we
- * we do not know the base path.  Anything that needs to be absolute (for
- * example cookies) must get the base path from the frontend.
- *
- * All relative paths must be prefixed with the relative root to ensure they
- * work no matter the depth at which they happen to appear.
- *
- * For Express `req.originalUrl` should be used as they remove the base from the
- * standard `url` property making it impossible to get the true depth.
- */
-export const relativeRoot = (originalUrl: string): string => {
-	const depth = (originalUrl.split("?", 1)[0].match(/\//g) || []).length
-	return normalizeUrlPath("./" + (depth > 1 ? "../".repeat(depth - 1) : ""))
-}
-
-/**
- * Get the relative path to the current resource.
- *
- * For example:
- *
- * / => .
- * /foo => ./foo
- * /foo/ => .
- * /foo/bar => ./bar
- * /foo/bar/ => .
- */
-export const relativePath = (originalUrl: string): string => {
-	const parts = originalUrl.split("?", 1)[0].split("/")
-	return normalizeUrlPath("./" + parts[parts.length - 1])
-}
-
-/**
- * code-server serves Code using Express.  Express removes the base from the url
- * and puts the original in `originalUrl` so we must use this to get the correct
- * depth.  Code is not aware it is behind Express so the types do not match.  We
- * may want to continue moving code into Code and eventually remove the Express
- * wrapper or move the web server back into code-server.
- */
-export const getOriginalUrl = (req: http.IncomingMessage): string => {
-	return (req as any).originalUrl || req.url
 }
