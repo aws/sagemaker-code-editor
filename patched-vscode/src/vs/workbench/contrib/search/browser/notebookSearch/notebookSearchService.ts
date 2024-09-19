@@ -13,7 +13,7 @@ import { NotebookEditorWidget } from 'vs/workbench/contrib/notebook/browser/note
 import { INotebookService } from 'vs/workbench/contrib/notebook/common/notebookService';
 import { INotebookSearchService } from 'vs/workbench/contrib/search/common/notebookSearch';
 import { INotebookCellMatchWithModel, INotebookFileMatchWithModel, contentMatchesToTextSearchMatches, webviewMatchesToTextSearchMatches } from 'vs/workbench/contrib/search/browser/notebookSearch/searchNotebookHelpers';
-import { ITextQuery, QueryType, ISearchProgressItem, ISearchComplete, ISearchConfigurationProperties, pathIncludedInQuery, ISearchService, IFolderQuery } from 'vs/workbench/services/search/common/search';
+import { ITextQuery, QueryType, ISearchProgressItem, ISearchComplete, ISearchConfigurationProperties, pathIncludedInQuery, ISearchService, IFolderQuery, DEFAULT_MAX_SEARCH_RESULTS } from 'vs/workbench/services/search/common/search';
 import * as arrays from 'vs/base/common/arrays';
 import { isNumber } from 'vs/base/common/types';
 import { IEditorResolverService } from 'vs/workbench/services/editor/common/editorResolverService';
@@ -117,22 +117,21 @@ export class NotebookSearchService implements INotebookSearchService {
 	}
 
 	private async doesFileExist(includes: string[], folderQueries: IFolderQuery<URI>[], token: CancellationToken): Promise<boolean> {
-		const promises: Promise<void>[] = includes.map(async includePattern => {
+		const promises: Promise<boolean>[] = includes.map(async includePattern => {
 			const query = this.queryBuilder.file(folderQueries.map(e => e.folder), {
 				includePattern: includePattern.startsWith('/') ? includePattern : '**/' + includePattern, // todo: find cleaner way to ensure that globs match all appropriate filetypes
-				exists: true
+				exists: true,
+				onlyFileScheme: true,
 			});
 			return this.searchService.fileSearch(
 				query,
 				token
 			).then((ret) => {
-				if (!ret.limitHit) {
-					throw Error('File not found');
-				}
+				return !!ret.limitHit;
 			});
 		});
 
-		return Promise.any(promises).then(() => true).catch(() => false);
+		return Promise.any(promises);
 	}
 
 	private async getClosedNotebookResults(textQuery: ITextQuery, scannedFiles: ResourceSet, token: CancellationToken): Promise<IClosedNotebookSearchResults> {
@@ -232,7 +231,7 @@ export class NotebookSearchService implements INotebookSearchService {
 			if (!widget.hasModel()) {
 				continue;
 			}
-			const askMax = isNumber(query.maxResults) ? query.maxResults + 1 : Number.MAX_SAFE_INTEGER;
+			const askMax = (isNumber(query.maxResults) ? query.maxResults : DEFAULT_MAX_SEARCH_RESULTS) + 1;
 			const uri = widget.viewModel!.uri;
 
 			if (!pathIncludedInQuery(query, uri.fsPath)) {

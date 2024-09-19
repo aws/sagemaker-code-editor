@@ -5,7 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as assert from 'assert';
+import assert from 'assert';
 import { DisposableStore, IDisposable } from 'vs/base/common/lifecycle';
 import { ensureNoDisposablesAreLeakedInTestSuite } from 'vs/base/test/common/utils';
 import { ILanguageConfigurationService } from 'vs/editor/common/languages/languageConfigurationRegistry';
@@ -23,6 +23,7 @@ import { EncodedTokenizationResult, IState, ITokenizationSupport, TokenizationRe
 import { NullState } from 'vs/editor/common/languages/nullTokenize';
 import { MetadataConsts, StandardTokenType } from 'vs/editor/common/encodedTokenAttributes';
 import { ITextModel } from 'vs/editor/common/model';
+import { FileAccess } from 'vs/base/common/network';
 
 function getIRange(range: IRange): IRange {
 	return {
@@ -56,7 +57,7 @@ function registerLanguageConfiguration(instantiationService: TestInstantiationSe
 	let configPath: string;
 	switch (languageId) {
 		case LanguageId.TypeScript:
-			configPath = path.join('extensions', 'typescript-basics', 'language-configuration.json');
+			configPath = FileAccess.asFileUri('vs/workbench/contrib/codeEditor/test/node/language-configuration.json').fsPath;
 			break;
 		default:
 			throw new Error('Unknown languageId');

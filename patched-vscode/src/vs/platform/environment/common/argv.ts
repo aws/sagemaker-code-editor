@@ -145,6 +145,4 @@ export interface NativeParsedArgs {
 	'trace-startup-format'?: string;
 	'trace-startup-file'?: string;
 	'trace-startup-duration'?: string;
-	'use-gl'?: string;
-	'use-angle'?: string;
 }

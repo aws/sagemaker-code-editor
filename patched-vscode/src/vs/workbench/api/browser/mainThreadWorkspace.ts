@@ -14,7 +14,7 @@ import { IFileService } from 'vs/platform/files/common/files';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ILabelService } from 'vs/platform/label/common/label';
 import { INotificationService } from 'vs/platform/notification/common/notification';
-import { IRequestService } from 'vs/platform/request/common/request';
+import { AuthInfo, Credentials, IRequestService } from 'vs/platform/request/common/request';
 import { WorkspaceTrustRequestOptions, IWorkspaceTrustManagementService, IWorkspaceTrustRequestService } from 'vs/platform/workspace/common/workspaceTrust';
 import { IWorkspace, IWorkspaceContextService, WorkbenchState, isUntitledWorkspace, WorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { extHostNamedCustomer, IExtHostContext } from 'vs/workbench/services/extensions/common/extHostCustomers';
@@ -28,6 +28,7 @@ import { IEditSessionIdentityService } from 'vs/platform/workspace/common/editSe
 import { EditorResourceAccessor, SaveReason, SideBySideEditor } from 'vs/workbench/common/editor';
 import { coalesce, firstOrDefault } from 'vs/base/common/arrays';
 import { ICanonicalUriService } from 'vs/platform/workspace/common/canonicalUri';
+import { revive } from 'vs/base/common/marshalling';
 
 @extHostNamedCustomer(MainContext.MainThreadWorkspace)
 export class MainThreadWorkspace implements MainThreadWorkspaceShape {
@@ -146,7 +147,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 
 		const query = this._queryBuilder.file(
 			includeFolder ? [includeFolder] : workspace.folders,
-			options
+			revive(options)
 		);
 
 		return this._searchService.fileSearch(query, token).then(result => {
@@ -164,7 +165,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		const workspace = this._contextService.getWorkspace();
 		const folders = folder ? [folder] : workspace.folders.map(folder => folder.uri);
 
-		const query = this._queryBuilder.text(pattern, folders, options);
+		const query = this._queryBuilder.text(pattern, folders, revive(options));
 		query._reason = 'startTextSearch';
 
 		const onProgress = (p: ISearchProgressItem) => {
@@ -221,6 +222,14 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 
 	$resolveProxy(url: string): Promise<string | undefined> {
 		return this._requestService.resolveProxy(url);
+	}
+
+	$lookupAuthorization(authInfo: AuthInfo): Promise<Credentials | undefined> {
+		return this._requestService.lookupAuthorization(authInfo);
+	}
+
+	$lookupKerberosAuthorization(url: string): Promise<string | undefined> {
+		return this._requestService.lookupKerberosAuthorization(url);
 	}
 
 	$loadCertificates(): Promise<string[]> {

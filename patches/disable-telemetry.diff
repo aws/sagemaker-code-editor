@@ -28,7 +28,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/electron-sandbox/desktop.co
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/electron-sandbox/desktop.contribution.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/electron-sandbox/desktop.contribution.ts
-@@ -288,7 +288,7 @@ import { MAX_ZOOM_LEVEL, MIN_ZOOM_LEVEL
+@@ -294,7 +294,7 @@ import { MAX_ZOOM_LEVEL, MIN_ZOOM_LEVEL
  			'telemetry.enableCrashReporter': {
  				'type': 'boolean',
  				'description': localize('telemetry.enableCrashReporting', "Enable crash reports to be collected. This helps us improve stability. \nThis option requires restart to take effect."),
@@ -41,7 +41,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/1dsAppender
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/telemetry/common/1dsAppender.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/1dsAppender.ts
-@@ -18,8 +18,8 @@ export interface IAppInsightsCore {
+@@ -19,8 +19,8 @@ export interface IAppInsightsCore {
  	unload(isAsync: boolean, unloadComplete: (unloadState: ITelemetryUnloadState) => void): void;
  }
  
@@ -51,4 +51,4 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/telemetry/common/1dsAppender
 +const endpointHealthUrl = 'https://0.0.0.0/ping';
  
  async function getClient(instrumentationKey: string, addInternalFlag?: boolean, xhrOverride?: IXHROverride): Promise<IAppInsightsCore> {
- 	const oneDs = await importAMDNodeModule<typeof import('@microsoft/1ds-core-js')>('@microsoft/1ds-core-js', 'dist/ms.core.js');
+ 	// ESM-comment-begin

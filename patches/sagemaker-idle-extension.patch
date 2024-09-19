@@ -274,9 +274,9 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
  	'extensions/search-result/tsconfig.json',
  	'extensions/simple-browser/tsconfig.json',
 +	'extensions/sagemaker-idle-extension/tsconfig.json',
+ 	'extensions/sagemaker-extension/tsconfig.json',
  	'extensions/tunnel-forwarding/tsconfig.json',
  	'extensions/typescript-language-features/test-workspace/tsconfig.json',
- 	'extensions/typescript-language-features/web/tsconfig.json',
 Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
@@ -286,9 +286,9 @@ Index: sagemaker-code-editor/vscode/build/npm/dirs.js
  	'extensions/php-language-features',
  	'extensions/references-view',
 +	'extensions/sagemaker-idle-extension',
+ 	'extensions/sagemaker-extension',
  	'extensions/search-result',
  	'extensions/simple-browser',
- 	'extensions/tunnel-forwarding',
 Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
@@ -327,7 +327,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  			if (pathname === this._callbackRoute) {
  				// callback support
  				return this._handleCallback(res);
-@@ -468,4 +474,25 @@ export class WebClientServer {
+@@ -475,6 +481,27 @@ export class WebClientServer {
  		});
  		return void res.end(data);
  	}
@@ -353,3 +353,5 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 +		}
 +	}
  }
+ 
+ /**
