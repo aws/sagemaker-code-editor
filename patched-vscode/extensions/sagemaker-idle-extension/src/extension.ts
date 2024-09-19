@@ -70,13 +70,13 @@ const startMonitoringTerminalActivity = () => {
 
 /**
  * Checks for terminal activity by reading the /dev/pts directory and comparing modification times of the files.
- * 
+ *
  * The /dev/pts directory is used in Unix-like operating systems to represent pseudo-terminal (PTY) devices.
- * Each active terminal session is assigned a PTY device. These devices are represented as files within the /dev/pts directory. 
- * When a terminal session has activity, such as when a user inputs commands or output is written to the terminal, 
- * the modification time (mtime) of the corresponding PTY device file is updated. By monitoring the modification 
+ * Each active terminal session is assigned a PTY device. These devices are represented as files within the /dev/pts directory.
+ * When a terminal session has activity, such as when a user inputs commands or output is written to the terminal,
+ * the modification time (mtime) of the corresponding PTY device file is updated. By monitoring the modification
  * times of the files in the /dev/pts directory, we can detect terminal activity.
- * 
+ *
  * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
  * updates the last activity timestamp.
  */
@@ -95,7 +95,7 @@ const checkTerminalActivity = () => {
 				const mtime = new Date(stats.mtime).getTime();
 				return now - mtime < CHECK_INTERVAL;
 			} catch (error) {
-				console.error(`${LOG_PREFIX}}Error reading file stats:`, error);
+				console.error(`${LOG_PREFIX} Error reading file stats:`, error);
 				return false;
 			}
 		});
@@ -106,7 +106,7 @@ const checkTerminalActivity = () => {
 	});
 };
 
- /**
+/**
  * Updates the last activity timestamp by recording the current timestamp in the idle file and
  * refreshing the status bar. The timestamp should be in ISO 8601 format and set to the UTC timezone.
  */

@@ -2,7 +2,7 @@ Index: sagemaker-code-editor/vscode/src/vs/base/common/network.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/base/common/network.ts
 +++ sagemaker-code-editor/vscode/src/vs/base/common/network.ts
-@@ -212,7 +212,9 @@ class RemoteAuthoritiesImpl {
+@@ -215,7 +215,9 @@ class RemoteAuthoritiesImpl {
  		return URI.from({
  			scheme: platform.isWeb ? this._preferredWebSchema : Schemas.vscodeRemoteResource,
  			authority: `${host}:${port}`,
@@ -38,19 +38,6 @@ Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench-dev.
  		Object.keys(self.webPackagePaths).map(function (key, index) {
  			self.webPackagePaths[key] = `${baseUrl}/remote/web/node_modules/${key}/${self.webPackagePaths[key]}`;
  		});
-Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
-===================================================================
---- sagemaker-code-editor.orig/vscode/src/vs/code/browser/workbench/workbench.html
-+++ sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
-@@ -36,7 +36,7 @@
- 	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/loader.js"></script>
- 	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/webPackagePaths.js"></script>
- 	<script>
--		const baseUrl = new URL('{{WORKBENCH_WEB_BASE_URL}}', window.location.origin).toString();
-+		const baseUrl = new URL('{{WORKBENCH_WEB_BASE_URL}}', window.location).toString();
- 		Object.keys(self.webPackagePaths).map(function (key, index) {
- 			self.webPackagePaths[key] = `${baseUrl}/node_modules/${key}/${self.webPackagePaths[key]}`;
- 		});
 Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/code/browser/workbench/workbench.ts
@@ -65,41 +52,11 @@ Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.ts
  	}
  
  	private startListening(): void {
- @@ -550,17 +551,6 @@ class WorkspaceProvider implements IWork
-  	}
-  }
-
- -function readCookie(name: string): string | undefined {
- -	const cookies = document.cookie.split('; ');
- -	for (const cookie of cookies) {
- -		if (cookie.startsWith(name + '=')) {
- -			return cookie.substring(name.length + 1);
- -		}
- -	}
- -
- -	return undefined;
- -}
- -
-  (function () {
-
-  	// Find config by checking for DOM
- @@ -569,8 +559,8 @@ function readCookie(name: string): strin
-  	if (!configElement || !configElementAttribute) {
-  		throw new Error('Missing web configuration element');
-  	}
- -	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents; workspaceUri?: UriComponents; callbackRoute: string } = JSON.parse(configElementAttribute);
- -	const secretStorageKeyPath = readCookie('vscode-secret-key-path');
- +	const config: IWorkbenchConstructionOptions & { folderUri?: UriComponents; workspaceUri?: UriComponents; callbackRoute: string } = { ...JSON.parse(configElementAttribute), remoteAuthority: location.host }
- +	const secretStorageKeyPath = (window.location.pathname + "/mint-key").replace(/\/\/+/g, "/");
-  	const secretStorageCrypto = secretStorageKeyPath && ServerKeyedAESCrypto.supported()
-  		? new ServerKeyedAESCrypto(secretStorageKeyPath) : new TransparentCrypto();
-
-
 Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
-@@ -99,7 +98,7 @@ export abstract class AbstractExtensionR
+@@ -98,7 +98,7 @@ export abstract class AbstractExtensionR
  					: version,
  				path: 'extension'
  			}));
@@ -124,7 +81,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -278,7 +278,7 @@ export class WebClientServer {
+@@ -281,7 +281,7 @@ export class WebClientServer {
  		const remoteAuthority = (
  			useTestResolver
  				? 'test+test'
@@ -133,10 +90,10 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  		);
  		if (!remoteAuthority) {
  			return serveError(req, res, 400, `Bad request.`);
-@@ -305,7 +305,12 @@ export class WebClientServer {
+@@ -308,7 +308,12 @@ export class WebClientServer {
  			scopes: [['user:email'], ['repo']]
  		} : undefined;
-
+ 
 +		const basePath: string = this._environmentService.args['base-path'] || "/"
 +		const base = relativeRoot(basePath)
 +		const vscodeBase = relativePath(basePath)
@@ -146,20 +103,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  			embedderIdentifier: 'server-distro',
  			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
  				...this._productService.extensionsGallery,
-@@ -340,8 +345,10 @@ export class WebClientServer {
- 		const values: { [key: string]: string } = {
- 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
- 			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
--			WORKBENCH_WEB_BASE_URL: this._staticRoute,
--			WORKBENCH_NLS_BASE_URL: nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : '',
-+			WORKBENCH_WEB_BASE_URL: vscodeBase + this._staticRoute,
-+			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
-+			BASE: base,
-+			VS_BASE: vscodeBase,
- 		};
- 
- 		if (useTestResolver) {
-@@ -443,3 +445,70 @@ export class WebClientServer {
+@@ -469,3 +474,70 @@ export class WebClientServer {
  		return void res.end(data);
  	}
  }

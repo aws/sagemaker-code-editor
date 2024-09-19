@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as minimist from 'minimist';
+import minimist from 'minimist';
 import { isWindows } from 'vs/base/common/platform';
 import { localize } from 'vs/nls';
 import { NativeParsedArgs } from 'vs/platform/environment/common/argv';
@@ -209,8 +209,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'trace-startup-format': { type: 'string' },
 	'trace-startup-file': { type: 'string' },
 	'trace-startup-duration': { type: 'string' },
-	'use-gl': { type: 'string' },
-	'use-angle': { type: 'string' },
 
 	_: { type: 'string[]' } // main arguments
 };
