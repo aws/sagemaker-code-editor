@@ -3,11 +3,14 @@
 # Exit immediately if a command exits with a non-zero status.
 set -ex
 
+# Set current project root
+PROJ_ROOT=$(pwd)
+
 # Define the source directory for the resources
-SOURCE_DIR="resources"
+SOURCE_DIR="${PROJ_ROOT}/resources"
 
 # Define the destination base directory
-DEST_DIR="vscode"
+DEST_DIR="${PROJ_ROOT}/vscode"
 
 # Define paths for each file relative to the base directories
 # Format: "source_file_path:destination_file_path"
