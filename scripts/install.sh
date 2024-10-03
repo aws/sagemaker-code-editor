@@ -69,21 +69,23 @@ cd ${PROJ_ROOT}
 printf "\n======== Comment out breaking git config lines in postinstall.js ========\n"
 sh ${PROJ_ROOT}/scripts/postinstall.sh
 
+# Delete node_modules to prevent node-gyp build error and reduce tarball size
+printf "\n======== Deleting vscode/node_modules ========\n"
+find "${PROJ_ROOT}/vscode" -name "node_modules" -type d -prune -exec rm -rf '{}' +
+
 # Create tarball
 if [ "$CREATE_TARBALL" = true ]; then
   # Build tarball for conda feedstock from vscode dir
   printf "\n======== Build Tarball for Conda Feedstock ========\n"
   bash ${PROJ_ROOT}/scripts/create_code_editor_tarball.sh -v ${VERSION}
-  exit 0
 fi
 
 # Copy resources
 printf "\n======== Copy resources ========\n"
 ${PROJ_ROOT}/scripts/copy-resources.sh
 
-# Delete node_modules to prevent node-gyp build error
-printf "\n======== Deleting vscode/node_modules ========\n"
-rm -rf "${PROJ_ROOT}/vscode/node_modules"
+# Copy patched files to patches-vscode
+cp -R vscode/* patched-vscode/
 
 # Build the project
 printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
