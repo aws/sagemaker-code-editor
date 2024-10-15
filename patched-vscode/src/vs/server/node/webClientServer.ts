@@ -463,12 +463,8 @@ export class WebClientServer {
    */
 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 		try {
-			const homeDirectory = process.env.HOME || process.env.USERPROFILE;
-			if (!homeDirectory) {
-				throw new Error('Home directory not found');
-			}
-
-			const idleFilePath = path.join(homeDirectory, '.code-editor-last-active-timestamp');
+			const tmpDirectory = '/tmp/'
+			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
 			const data = await readFile(idleFilePath, 'utf8');
 
 			res.statusCode = 200;
