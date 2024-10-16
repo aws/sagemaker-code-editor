@@ -21,19 +21,16 @@ export function deactivate() {
 
 /**
  * Initializes the file path where the idle timestamp will be stored.
- * It sets the path to a hidden file in the user's home directory.
+ * It sets the path to a hidden file in the /tmp/ directory.
  */
 function initializeIdleFilePath() {
-	const homeDirectory = process.env.HOME || process.env.USERPROFILE;
-	if (!homeDirectory) {
-		console.log(`${LOG_PREFIX} Unable to determine the home directory.`);
-		return;
-	}
-	idleFilePath = path.join(homeDirectory, ".sagemaker-last-active-timestamp");
+	const tmpDirectory = "/tmp/"; 
+	idleFilePath = path.join(tmpDirectory, ".sagemaker-last-active-timestamp");
 
 	// Set initial lastActivetimestamp
 	updateLastActivityTimestamp()
 }
+
 
 /**
  * Registers event listeners to monitor user activity within the VSCode editor.
