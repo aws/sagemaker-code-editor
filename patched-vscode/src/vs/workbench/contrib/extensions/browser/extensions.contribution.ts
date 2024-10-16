@@ -258,7 +258,12 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 				type: 'boolean',
 				description: localize('extensionsInQuickAccess', "When enabled, extensions can be searched for via Quick Access and report issues from there."),
 				default: true
-			}
+			},
+			'extensions.openNotebookData': {
+				type: 'object',
+				scope: ConfigurationScope.APPLICATION,
+				default: {},
+			},
 		}
 	});
 

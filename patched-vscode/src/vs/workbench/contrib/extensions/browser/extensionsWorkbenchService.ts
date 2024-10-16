@@ -950,6 +950,17 @@ export class ExtensionsWorkbenchService extends Disposable implements IExtension
 		urlService.registerHandler(this);
 
 		this.whenInitialized = this.initialize();
+
+		//Update workspace to open notebook
+        const urlParams = new URLSearchParams(window.location.search);
+        const notebookKey = urlParams.get('openNotebook');
+        const clusterId = urlParams.get('clusterId');
+		const region = urlParams.get('region');
+        configurationService.updateValue('extensions.openNotebookData', {
+            notebookKey: notebookKey,
+            clusterId: clusterId,
+			region: region,
+        });
 	}
 
 	private async initialize(): Promise<void> {
