@@ -147,7 +147,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/extension.ts
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,112 @@
 +import * as vscode from "vscode";
 +import * as fs from "fs";
 +import * as path from "path";
@@ -171,15 +171,11 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +
 +/**
 + * Initializes the file path where the idle timestamp will be stored.
-+ * It sets the path to a hidden file in the user's home directory.
++ * It sets the path to a hidden file in the /tmp/ directory.
 + */
 +function initializeIdleFilePath() {
-+	const homeDirectory = process.env.HOME || process.env.USERPROFILE;
-+	if (!homeDirectory) {
-+		console.log(`${LOG_PREFIX} Unable to determine the home directory.`);
-+		return;
-+	}
-+	idleFilePath = path.join(homeDirectory, ".sagemaker-last-active-timestamp");
++	const tmpDirectory = "/tmp/"; 
++	idleFilePath = path.join(tmpDirectory, ".sagemaker-last-active-timestamp");
 +
 +	// Set initial lastActivetimestamp
 +	updateLastActivityTimestamp()
@@ -327,7 +323,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  			if (pathname === this._callbackRoute) {
  				// callback support
  				return this._handleCallback(res);
-@@ -451,6 +457,27 @@ export class WebClientServer {
+@@ -451,6 +457,23 @@ export class WebClientServer {
  		});
  		return void res.end(data);
  	}
@@ -337,12 +333,8 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 +   */
 +	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 +		try {
-+			const homeDirectory = process.env.HOME || process.env.USERPROFILE;
-+			if (!homeDirectory) {
-+				throw new Error('Home directory not found');
-+			}
-+
-+			const idleFilePath = path.join(homeDirectory, '.sagemaker-last-active-timestamp');
++			const tmpDirectory = '/tmp/'
++			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
 +			const data = await readFile(idleFilePath, 'utf8');
 +
 +			res.statusCode = 200;
