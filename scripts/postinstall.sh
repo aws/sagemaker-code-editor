@@ -15,7 +15,19 @@ if [ ! -f "$POSTINSTALL_JS_PATH" ]; then
     exit 1
 fi
 
-# Use sed to comment out the specific lines
-sed -i '' '/cp\.execSync('"'"'git config .*);/s/^/\/\/ /' "$POSTINSTALL_JS_PATH"
+# set +e to prevent script from exiting when not on macOS
+set +e
+
+# Check if on macOS
+system_profiler SPSoftwareDataType
+
+# Run with different arguments depending on the OS
+if [ $? -eq 0 ]; then
+    # Use sed to comment out the specific lines
+    sed -i '' '/cp\.execSync('"'"'git config .*);/s/^/\/\/ /' "$POSTINSTALL_JS_PATH"
+else
+    # Use sed to comment out the specific lines
+    sed -i '/cp\.execSync('"'"'git config .*);/s/^/\/\/ /' "$POSTINSTALL_JS_PATH"
+fi
 
 echo "Specified git config lines have been commented out in $POSTINSTALL_JS_PATH."

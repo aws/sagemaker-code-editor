@@ -2,7 +2,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension.ts
-@@ -0,0 +1,137 @@
+@@ -0,0 +1,140 @@
 +import * as vscode from 'vscode';
 +import * as fs from 'fs';
 +import { SessionWarning } from "./sessionWarning";
@@ -139,6 +139,9 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
 +        initialize(sagemakerCookie);
 +        updateStatusItemWithMetadata(context);
 +    });
++
++    // render warning message regarding auto upgrade disabled
++    vscode.window.showInformationMessage('Auto-updates for extensions are turned off by default. You can change this with "Enable Auto Update for All Extensions" command.');
 +}
 Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/sessionWarning.ts
 ===================================================================
