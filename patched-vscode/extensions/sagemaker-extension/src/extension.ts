@@ -17,6 +17,7 @@ import * as console from "console";
 
 
 const PARSE_SAGEMAKER_COOKIE_COMMAND = 'sagemaker.parseCookies';
+const ENABLE_AUTO_UPDATE_COMMAND = 'workbench.extensions.action.enableAutoUpdate';
 
 function showWarningDialog() {
     vscode.commands.executeCommand(PARSE_SAGEMAKER_COOKIE_COMMAND).then(response => {
@@ -121,6 +122,37 @@ function updateStatusItemWithMetadata(context: vscode.ExtensionContext) {
     });
 }
 
+// Render warning message regarding auto upgrade disabled
+function renderExtensionAutoUpgradeDisabledNotification() {
+    // Get current extension auto disabled config
+    const autoUpdateEnabled = vscode.workspace.getConfiguration('extensions').get('autoUpdate');
+
+    // Check if customer has choose to disable this notification
+    const extensionConfig = vscode.workspace.getConfiguration('sagemaker-extension');
+    const showNotificationEnabled = extensionConfig.get('notification.extensionAutoUpdateDisabled', true);
+
+    // Only show notification, if auto update is disabled, and customer hasn't opt-out the notification
+    if (showNotificationEnabled && autoUpdateEnabled == false) {
+        const enableAutoUpdate = 'Enable Auto Update Extensions';
+        const doNotShowAgain = 'Do not show again';
+        vscode.window.showInformationMessage(
+            'Extension auto-update is disabled. This can be changed in Code Editor settings.',
+            enableAutoUpdate,
+            doNotShowAgain,
+        ).then(response => {
+            if (response === enableAutoUpdate) {
+                vscode.commands.executeCommand(ENABLE_AUTO_UPDATE_COMMAND)
+            } else if (response == doNotShowAgain) {
+                extensionConfig.update(
+                    'notification.extensionAutoUpdateDisabled',
+                    false,
+                    vscode.ConfigurationTarget.Global
+                );
+            }
+        })
+    }
+}
+
 export function activate(context: vscode.ExtensionContext) {
 
     // TODO: log activation of extension
@@ -134,4 +166,7 @@ export function activate(context: vscode.ExtensionContext) {
         initialize(sagemakerCookie);
         updateStatusItemWithMetadata(context);
     });
+
+    // render warning message regarding auto upgrade disabled
+    renderExtensionAutoUpgradeDisabledNotification();
 }
