@@ -134,4 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
         initialize(sagemakerCookie);
         updateStatusItemWithMetadata(context);
     });
+
+    // render warning message regarding auto upgrade disabled
+    vscode.window.showInformationMessage('Auto-updates for extensions are turned off by default. You can change this with "Enable Auto Update for All Extensions" command.');
 }
