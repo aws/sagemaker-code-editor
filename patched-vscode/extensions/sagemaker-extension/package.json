@@ -27,8 +27,14 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "Sagemaker Extension",
-      "properties": {}
+      "title": "SageMaker Extension",
+      "properties": {
+        "sagemaker-extension.notification.extensionAutoUpdateDisabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show notification if extension auto update is disabled"
+        }
+      }
     },
     "commands": [
     ]
