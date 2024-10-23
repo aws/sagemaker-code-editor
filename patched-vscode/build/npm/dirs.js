@@ -42,6 +42,7 @@ const dirs = [
 	'extensions/sagemaker-extension',
 	'extensions/sagemaker-idle-extension',
 	'extensions/sagemaker-terminal-crash-mitigation',
+	'extensions/sagemaker-open-notebook-extension',
 	'extensions/search-result',
 	'extensions/simple-browser',
 	'extensions/tunnel-forwarding',
