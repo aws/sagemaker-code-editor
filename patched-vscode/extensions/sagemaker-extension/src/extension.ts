@@ -134,4 +134,14 @@ export function activate(context: vscode.ExtensionContext) {
         initialize(sagemakerCookie);
         updateStatusItemWithMetadata(context);
     });
+
+    // New command
+    const logCookieCommand = vscode.commands.registerCommand('sagemaker.logCookie', () => {
+        vscode.commands.executeCommand(PARSE_SAGEMAKER_COOKIE_COMMAND).then(response => {
+            const sagemakerCookie: SagemakerCookie = response as SagemakerCookie;
+            console.log('SageMaker Cookie:', sagemakerCookie);
+        });
+    });
+
+    context.subscriptions.push(logCookieCommand);
 }
