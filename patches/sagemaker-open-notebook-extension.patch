@@ -162,7 +162,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension/src/extension.ts
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,89 @@
 +
 +import * as vscode from 'vscode';
 +import * as https from 'https';
@@ -208,6 +208,15 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension
 +                "%%bash\n",
 +                `aws ssm start-session --target sagemaker-cluster:${clusterId} --region ${region}`
 +            ];
++            cell.cell_type = "code";
++        }
++
++        if (cell.metadata && 
++            cell.metadata.jumpStartAlterations && 
++            cell.metadata.jumpStartAlterations.includes('clusterName')) {
++            cell.source = [
++                `!hyperpod connect-cluster --cluster-name ${clusterId}`
++            ]
 +            cell.cell_type = "code";
 +        }
 +        return cell;

@@ -45,6 +45,15 @@ function processNotebookContent(content: string, clusterId: string, region: stri
             ];
             cell.cell_type = "code";
         }
+
+        if (cell.metadata && 
+            cell.metadata.jumpStartAlterations && 
+            cell.metadata.jumpStartAlterations.includes('clusterName')) {
+            cell.source = [
+                `!hyperpod connect-cluster --cluster-name ${clusterId}`
+            ]
+            cell.cell_type = "code";
+        }
         return cell;
     });
     return JSON.stringify(notebook, null, 2);
