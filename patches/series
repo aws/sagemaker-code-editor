@@ -9,3 +9,4 @@ sagemaker-integration.diff
 license.diff
 sagemaker-idle-extension.patch
 terminal-crash-mitigation.patch
+security.diff
