@@ -289,10 +289,12 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -4,6 +4,7 @@
+@@ -3,7 +3,8 @@
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
   *--------------------------------------------------------------------------------------------*/
  
- import { createReadStream } from 'fs';
+-import { createReadStream } from 'fs';
++import { createReadStream, existsSync, writeFileSync } from 'fs';
 +import {readFile } from 'fs/promises';
  import { Promises } from 'vs/base/node/pfs';
  import * as path from 'path';
@@ -323,7 +325,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  			if (pathname === this._callbackRoute) {
  				// callback support
  				return this._handleCallback(res);
-@@ -451,6 +457,23 @@ export class WebClientServer {
+@@ -451,6 +457,31 @@ export class WebClientServer {
  		});
  		return void res.end(data);
  	}
@@ -335,6 +337,14 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 +		try {
 +			const tmpDirectory = '/tmp/'
 +			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
++
++			// If idle shutdown file does not exist, this indicates the app UI may never been opened
++			// Create the initial metadata file
++			if (!existsSync(idleFilePath)) {
++				const timestamp = new Date().toISOString();
++				writeFileSync(idleFilePath, timestamp);
++			}
++
 +			const data = await readFile(idleFilePath, 'utf8');
 +
 +			res.statusCode = 200;
