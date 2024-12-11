@@ -17,7 +17,18 @@ export function activate() {
 
 }
 
+function isValidRegion(region: string): boolean {
+    // This regex allows for characters, numbers, and hyphens
+    const regionRegex = /^[a-zA-Z0-9-]+$/;
+    return regionRegex.test(region);
+}
+
 async function loadAndDisplayNotebook(fileKey: string, clusterId: string, region: string) {
+    if (!isValidRegion(region)) {
+        vscode.window.showErrorMessage('Invalid region format. Region should only contain characters, numbers, and hyphens.');
+        return;
+    }
+    
     const bucketName = `jumpstart-cache-prod-${region}`;
     const url = `https://${bucketName}.s3.${region}.amazonaws.com/${fileKey}`;
     try {

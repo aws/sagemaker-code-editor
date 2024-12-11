@@ -162,7 +162,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension/src/extension.ts
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,91 @@
 +
 +import * as vscode from 'vscode';
 +import * as https from 'https';
@@ -182,7 +182,18 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension
 +
 +}
 +
++function isValidRegion(region: string): boolean {
++    // This regex allows for characters, numbers, and hyphens
++    const regionRegex = /^[a-zA-Z0-9-]+$/;
++    return regionRegex.test(region);
++}
++
 +async function loadAndDisplayNotebook(fileKey: string, clusterId: string, region: string) {
++    if (!isValidRegion(region)) {
++        vscode.window.showErrorMessage('Invalid region format. Region should only contain characters, numbers, and hyphens.');
++        return;
++    }
++    
 +    const bucketName = `jumpstart-cache-prod-${region}`;
 +    const url = `https://${bucketName}.s3.${region}.amazonaws.com/${fileKey}`;
 +    try {
