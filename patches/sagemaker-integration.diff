@@ -2,7 +2,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/client.ts
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/src/vs/workbench/browser/client.ts
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,92 @@
 +import { Disposable } from 'vs/base/common/lifecycle';
 +import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 +import { MenuId, MenuRegistry } from "vs/platform/actions/common/actions";
@@ -21,6 +21,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/client.ts
 +
 +	static LOGOUT_COMMAND_ID = 'sagemaker.logout';
 +	static COOKIE_COMMAND_ID = 'sagemaker.parseCookies';
++	static COOKIE_LOAD_COMMAND_ID = 'sagemaker.loadCookies';
 +
 +	private registerSagemakerCommands() {
 +		const authMode: string | undefined = this.getCookieValue('authMode');
@@ -28,6 +29,16 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/client.ts
 +		const studioUserProfileName: string | undefined = this.getCookieValue('studioUserProfileName')
 +		const ssoExpiryTimestamp: string | undefined = this.getCookieValue('ssoExpiryTimestamp')
 +		const redirectURL: string | undefined = this.getCookieValue('redirectURL')
++
++		const cookieEntries = [
++			'authMode',
++			'expiryTime',
++			'studioUserProfileName',
++			'ssoExpiryTimestamp',
++			'redirectURL',
++			'AccessToken',
++			'StudioSessionToken',
++		];
 +
 +		this.logService.debug('Registering sagemaker commands...');
 +
@@ -40,6 +51,26 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/client.ts
 +				redirectURL: redirectURL
 +			};
 +		});
++
++		CommandsRegistry.registerCommand(
++			SagemakerServerClient.COOKIE_LOAD_COMMAND_ID,
++			async () => {
++				try {
++					const entriesQueryParam = cookieEntries
++						.map((entry) => `entry=${entry}`)
++						.join("&");
++					const urlParams = new URLSearchParams(window.location.search);
++					const workspaceFolder = urlParams.get('folder');
++					if (workspaceFolder) {
++						const response = await fetch(`/load-cookies?workspace=${encodeURIComponent(workspaceFolder)}&${entriesQueryParam}`);
++						return await response.text();
++					}
++					return '';
++				} catch (error) {
++					return '';
++				}
++			}
++		);
 +
 +		CommandsRegistry.registerCommand(SagemakerServerClient.LOGOUT_COMMAND_ID, () => {
 +			const currentUrl = new URL(window.location.href);
@@ -65,6 +96,57 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/client.ts
 +	}
 +}
 \ No newline at end of file
+Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteExtensionHostAgentServer.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/server/node/remoteExtensionHostAgentServer.ts
++++ sagemaker-code-editor/vscode/src/vs/server/node/remoteExtensionHostAgentServer.ts
+@@ -168,6 +168,46 @@
+			}
+			return serveFile(filePath, CacheControl.ETAG, this._logService, req, res, responseHeaders);
+		}
++
++		if (pathname === '/load-cookies') {
++			let entries = parsedUrl.query['entry'] ?? [];
++			let workspace = (Array.isArray(parsedUrl.query['workspace']) ? parsedUrl.query['workspace'][0] : parsedUrl.query['workspace']) ?? '/';
++
++			if (!Array.isArray(entries)) {
++				entries = [entries];
++			}
++
++			const requestCookie = req.headers.cookie;
++			if (!requestCookie) {
++				res.writeHead(200, { 'Content-Type' : 'text/plain' });
++				return void res.end('');
++			}
++
++			const parsedCookies = requestCookie.split(';').reduce((result, cookie) => {
++				const [name, ...rest] = cookie.split('=');
++				const value = rest.join('=').trim();
++				const key = name.trim();
++				if (entries.includes(key)) {
++					result[key] = decodeURIComponent(value);
++				}
++				return result;
++			}, {} as Record<string, string>);
++
++			const dirPath = join(workspace, '.aws/sso');
++			const filePath = join(dirPath, '/cookies.json');
++			try {
++				if (!fs.existsSync(dirPath)) {
++					fs.mkdirSync(dirPath, { recursive: true });
++				}
++				fs.writeFileSync(filePath,  JSON.stringify(parsedCookies));	
++			} catch {
++				res.writeHead(200, { 'Content-Type' : 'text/plain' });
++				return void res.end('');			
++			}
++
++			res.writeHead(200, { 'Content-Type' : 'text/plain' });
++			return void res.end(filePath);
++		}
+
+		// workbench web UI
+		if (this._webClientServer) {
 Index: sagemaker-code-editor/vscode/src/vs/workbench/browser/web.main.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/browser/web.main.ts
