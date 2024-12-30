@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createReadStream } from 'fs';
+import { createReadStream, existsSync, writeFileSync } from 'fs';
 import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
 import * as path from 'path';
@@ -465,6 +465,14 @@ export class WebClientServer {
 		try {
 			const tmpDirectory = '/tmp/'
 			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
+
+			// If idle shutdown file does not exist, this indicates the app UI may never been opened
+			// Create the initial metadata file
+			if (!existsSync(idleFilePath)) {
+				const timestamp = new Date().toISOString();
+				writeFileSync(idleFilePath, timestamp);
+			}
+
 			const data = await readFile(idleFilePath, 'utf8');
 
 			res.statusCode = 200;
