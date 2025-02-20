@@ -16,6 +16,7 @@ export class SagemakerServerClient extends Disposable {
 
 	static LOGOUT_COMMAND_ID = 'sagemaker.logout';
 	static COOKIE_COMMAND_ID = 'sagemaker.parseCookies';
+	static COOKIE_LOAD_COMMAND_ID = 'sagemaker.loadCookies';
 
 	private registerSagemakerCommands() {
 		const authMode: string | undefined = this.getCookieValue('authMode');
@@ -23,6 +24,16 @@ export class SagemakerServerClient extends Disposable {
 		const studioUserProfileName: string | undefined = this.getCookieValue('studioUserProfileName')
 		const ssoExpiryTimestamp: string | undefined = this.getCookieValue('ssoExpiryTimestamp')
 		const redirectURL: string | undefined = this.getCookieValue('redirectURL')
+
+		const cookieEntries = [
+			'authMode',
+			'expiryTime',
+			'studioUserProfileName',
+			'ssoExpiryTimestamp',
+			'redirectURL',
+			'AccessToken',
+			'StudioSessionToken',
+		];
 
 		this.logService.debug('Registering sagemaker commands...');
 
@@ -35,6 +46,26 @@ export class SagemakerServerClient extends Disposable {
 				redirectURL: redirectURL
 			};
 		});
+
+		CommandsRegistry.registerCommand(
+			SagemakerServerClient.COOKIE_LOAD_COMMAND_ID,
+			async () => {
+				try {
+					const entriesQueryParam = cookieEntries
+						.map((entry) => `entry=${entry}`)
+						.join("&");
+					const urlParams = new URLSearchParams(window.location.search);
+					const workspaceFolder = urlParams.get('folder');
+					if (workspaceFolder) {
+						const response = await fetch(`/load-cookies?workspace=${encodeURIComponent(workspaceFolder)}&${entriesQueryParam}`);
+						return await response.text();
+					}
+					return '';
+				} catch (error) {
+					return '';
+				}
+			}
+		);
 
 		CommandsRegistry.registerCommand(SagemakerServerClient.LOGOUT_COMMAND_ID, () => {
 			const currentUrl = new URL(window.location.href);
