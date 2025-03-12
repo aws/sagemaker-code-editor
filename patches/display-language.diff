@@ -1,0 +1,395 @@
+Index: sagemaker-code-editor/vscode/src/vs/platform/languagePacks/browser/languagePacks.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/platform/languagePacks/browser/languagePacks.ts
++++ sagemaker-code-editor/vscode/src/vs/platform/languagePacks/browser/languagePacks.ts
+@@ -5,18 +5,24 @@
+ 
+ import { CancellationTokenSource } from 'vs/base/common/cancellation';
+ import { URI } from 'vs/base/common/uri';
++import { ProxyChannel } from 'vs/base/parts/ipc/common/ipc';
+ import { IExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionManagement';
+ import { IExtensionResourceLoaderService } from 'vs/platform/extensionResourceLoader/common/extensionResourceLoader';
+-import { ILanguagePackItem, LanguagePackBaseService } from 'vs/platform/languagePacks/common/languagePacks';
++import { ILanguagePackItem, ILanguagePackService, LanguagePackBaseService } from 'vs/platform/languagePacks/common/languagePacks';
+ import { ILogService } from 'vs/platform/log/common/log';
++import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
+ 
+ export class WebLanguagePacksService extends LanguagePackBaseService {
++	private readonly languagePackService: ILanguagePackService;
++
+ 	constructor(
++		@IRemoteAgentService remoteAgentService: IRemoteAgentService,
+ 		@IExtensionResourceLoaderService private readonly extensionResourceLoaderService: IExtensionResourceLoaderService,
+ 		@IExtensionGalleryService extensionGalleryService: IExtensionGalleryService,
+ 		@ILogService private readonly logService: ILogService
+ 	) {
+ 		super(extensionGalleryService);
++		this.languagePackService = ProxyChannel.toService<ILanguagePackService>(remoteAgentService.getConnection()!.getChannel('languagePacks'))
+ 	}
+ 
+ 	async getBuiltInExtensionTranslationsUri(id: string, language: string): Promise<URI | undefined> {
+@@ -72,6 +78,6 @@ export class WebLanguagePacksService ext
+ 
+ 	// Web doesn't have a concept of language packs, so we just return an empty array
+ 	getInstalledLanguages(): Promise<ILanguagePackItem[]> {
+-		return Promise.resolve([]);
++		return this.languagePackService.getInstalledLanguages()
+ 	}
+ }
+Index: sagemaker-code-editor/vscode/src/vs/server/node/serverServices.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/server/node/serverServices.ts
++++ sagemaker-code-editor/vscode/src/vs/server/node/serverServices.ts
+@@ -11,7 +11,7 @@ import * as path from 'vs/base/common/pa
+ import { IURITransformer } from 'vs/base/common/uriIpc';
+ import { getMachineId, getSqmMachineId, getdevDeviceId } from 'vs/base/node/id';
+ import { Promises } from 'vs/base/node/pfs';
+-import { ClientConnectionEvent, IMessagePassingProtocol, IPCServer, StaticRouter } from 'vs/base/parts/ipc/common/ipc';
++import { ClientConnectionEvent, IMessagePassingProtocol, IPCServer, ProxyChannel, StaticRouter } from 'vs/base/parts/ipc/common/ipc';
+ import { ProtocolConstants } from 'vs/base/parts/ipc/common/ipc.net';
+ import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+ import { ConfigurationService } from 'vs/platform/configuration/common/configurationService';
+@@ -225,6 +225,9 @@ export async function setupServerService
+ 		const channel = new ExtensionManagementChannel(extensionManagementService, (ctx: RemoteAgentConnectionContext) => getUriTransformer(ctx.remoteAuthority));
+ 		socketServer.registerChannel('extensions', channel);
+ 
++		const languagePackChannel = ProxyChannel.fromService<RemoteAgentConnectionContext>(accessor.get(ILanguagePackService), disposables);
++		socketServer.registerChannel('languagePacks', languagePackChannel);
++
+ 		// clean up extensions folder
+ 		remoteExtensionsScanner.whenExtensionsReady().then(() => extensionManagementService.cleanUp());
+ 
+Index: sagemaker-code-editor/vscode/src/vs/base/common/platform.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/base/common/platform.ts
++++ sagemaker-code-editor/vscode/src/vs/base/common/platform.ts
+@@ -2,8 +2,6 @@
+  *  Copyright (c) Microsoft Corporation. All rights reserved.
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
+-import * as nls from 'vs/nls';
+-
+ export const LANGUAGE_DEFAULT = 'en';
+ 
+ let _isWindows = false;
+@@ -112,17 +110,21 @@ else if (typeof navigator === 'object' &
+ 	_isMobile = _userAgent?.indexOf('Mobi') >= 0;
+ 	_isWeb = true;
+ 
+-	const configuredLocale = nls.getConfiguredDefaultLocale(
+-		// This call _must_ be done in the file that calls `nls.getConfiguredDefaultLocale`
+-		// to ensure that the NLS AMD Loader plugin has been loaded and configured.
+-		// This is because the loader plugin decides what the default locale is based on
+-		// how it's able to resolve the strings.
+-		nls.localize({ key: 'ensureLoaderPluginIsLoaded', comment: ['{Locked}'] }, '_')
+-	);
+-
+-	_locale = configuredLocale || LANGUAGE_DEFAULT;
++	_locale = LANGUAGE_DEFAULT;
+ 	_language = _locale;
+ 	_platformLocale = navigator.language;
++	const el = typeof document !== 'undefined' && document.getElementById('vscode-remote-nls-configuration');
++	const rawNlsConfig = el && el.getAttribute('data-settings');
++	if (rawNlsConfig) {
++		try {
++			const nlsConfig: NLSConfig = JSON.parse(rawNlsConfig);
++			const resolved = nlsConfig.availableLanguages['*'];
++			_locale = nlsConfig.locale;
++			_platformLocale = nlsConfig.osLocale;
++			_language = resolved ? resolved : LANGUAGE_DEFAULT;
++			_translationsConfigFile = nlsConfig._translationsConfigFile;
++		} catch (error) { /* Oh well. */ }
++	}
+ }
+ 
+ // Unknown environment
+Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/code/browser/workbench/workbench.html
++++ sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
+@@ -19,6 +19,9 @@
+ 		<!-- Workbench Configuration -->
+ 		<meta id="vscode-workbench-web-configuration" data-settings="{{WORKBENCH_WEB_CONFIGURATION}}">
+ 
++		<!-- NLS Configuration -->
++		<meta id="vscode-remote-nls-configuration" data-settings="{{NLS_CONFIGURATION}}">
++
+ 		<!-- Workbench Auth Session -->
+ 		<meta id="vscode-workbench-auth-session" data-settings="{{WORKBENCH_AUTH_SESSION}}">
+ 
+@@ -46,14 +49,26 @@
+ 		// Normalize locale to lowercase because translationServiceUrl is case-sensitive.
+ 		// ref: https://github.com/microsoft/vscode/issues/187795
+ 		const locale = localStorage.getItem('vscode.nls.locale') || navigator.language.toLowerCase();
+-		if (!locale.startsWith('en')) {
+-			nlsConfig['vs/nls'] = {
+-				availableLanguages: {
+-					'*': locale
+-				},
+-				translationServiceUrl: '{{WORKBENCH_NLS_BASE_URL}}'
+-			};
+-		}
++		try {
++			nlsConfig['vs/nls'] = JSON.parse(document.getElementById("vscode-remote-nls-configuration").getAttribute("data-settings"))
++			if (nlsConfig['vs/nls']._resolvedLanguagePackCoreLocation) {
++				const bundles = Object.create(null)
++				nlsConfig['vs/nls'].loadBundle = (bundle, _language, cb) => {
++					const result = bundles[bundle]
++					if (result) {
++						return cb(undefined, result)
++					}
++					const path = nlsConfig['vs/nls']._resolvedLanguagePackCoreLocation + "/" + bundle.replace(/\//g, "!") + ".nls.json"
++					fetch(`{{WORKBENCH_WEB_BASE_URL}}/../vscode-remote-resource?path=${encodeURIComponent(path)}`)
++						.then((response) => response.json())
++						.then((json) => {
++							bundles[bundle] = json
++							cb(undefined, json)
++						})
++						.catch(cb)
++				}
++			}
++		} catch (error) { /* Probably fine. */ }
+ 
+ 		require.config({
+ 			baseUrl: `${baseUrl}/out`,
+Index: sagemaker-code-editor/vscode/src/vs/platform/environment/common/environmentService.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/platform/environment/common/environmentService.ts
++++ sagemaker-code-editor/vscode/src/vs/platform/environment/common/environmentService.ts
+@@ -101,7 +101,7 @@ export abstract class AbstractNativeEnvi
+ 			return URI.file(join(vscodePortable, 'argv.json'));
+ 		}
+ 
+-		return joinPath(this.userHome, this.productService.dataFolderName, 'argv.json');
++		return joinPath(this.appSettingsHome, 'argv.json');
+ 	}
+ 
+ 	@memoize
+Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/server/node/remoteLanguagePacks.ts
++++ sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
+@@ -32,6 +32,12 @@ export function getNLSConfiguration(lang
+ 				if (InternalNLSConfiguration.is(value)) {
+ 					value._languagePackSupport = true;
+ 				}
++				// If the configuration has no results keep trying since code-server
++				// doesn't restart when a language is installed so this result would
++				// persist (the plugin might not be installed yet for example).
++				if (value.locale !== 'en' && value.locale !== 'en-us' && Object.keys(value.availableLanguages).length === 0) {
++					_cache.delete(key);
++				}
+ 				return value;
+ 			});
+ 			_cache.set(key, result);
+@@ -46,3 +52,43 @@ export namespace InternalNLSConfiguratio
+ 		return candidate && typeof candidate._languagePackId === 'string';
+ 	}
+ }
++
++/**
++ * The code below is copied from from src/main.js.
++ */
++
++export const getLocaleFromConfig = async (argvResource: string): Promise<string> => {
++	try {
++		const content = stripComments(await fs.promises.readFile(argvResource, 'utf8'));
++		return JSON.parse(content).locale;
++	} catch (error) {
++		if (error.code !== "ENOENT") {
++			console.warn(error)
++		}
++		return 'en';
++	}
++};
++
++const stripComments = (content: string): string => {
++	const regexp = /('(?:[^\\']*(?:\\.)?)*')|('(?:[^\\']*(?:\\.)?)*')|(\/\*(?:\r?\n|.)*?\*\/)|(\/{2,}.*?(?:(?:\r?\n)|$))/g;
++
++	return content.replace(regexp, (match, _m1, _m2, m3, m4) => {
++		// Only one of m1, m2, m3, m4 matches
++		if (m3) {
++			// A block comment. Replace with nothing
++			return '';
++		} else if (m4) {
++			// A line comment. If it ends in \r?\n then keep it.
++			const length_1 = m4.length;
++			if (length_1 > 2 && m4[length_1 - 1] === '\n') {
++				return m4[length_1 - 2] === '\r' ? '\r\n' : '\n';
++			}
++			else {
++				return '';
++			}
++		} else {
++			// We match a string
++			return match;
++		}
++	});
++};
+Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
++++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
+@@ -28,6 +28,7 @@ import { URI } from 'vs/base/common/uri'
+ import { streamToBuffer } from 'vs/base/common/buffer';
+ import { IProductConfiguration } from 'vs/base/common/product';
+ import { isString } from 'vs/base/common/types';
++import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
+ import { CharCode } from 'vs/base/common/charCode';
+ import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
+ 
+@@ -351,6 +352,8 @@ export class WebClientServer {
+ 			callbackRoute: this._callbackRoute
+ 		};
+ 
++		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource.fsPath);
++		const nlsConfiguration = await getNLSConfiguration(locale, this._environmentService.userDataPath)
+ 		const nlsBaseUrl = this._productService.extensionsGallery?.nlsBaseUrl;
+ 		const values: { [key: string]: string } = {
+ 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
+@@ -359,6 +362,7 @@ export class WebClientServer {
+ 			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
+ 			BASE: base,
+ 			VS_BASE: vscodeBase,
++			NLS_CONFIGURATION: asJSON(nlsConfiguration),
+ 		};
+ 
+ 		if (useTestResolver) {
+Index: sagemaker-code-editor/vscode/src/vs/server/node/serverEnvironmentService.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/server/node/serverEnvironmentService.ts
++++ sagemaker-code-editor/vscode/src/vs/server/node/serverEnvironmentService.ts
+@@ -14,6 +14,8 @@ import { URI } from 'vs/base/common/uri'
+ 
+ export const serverOptions: OptionDescriptions<Required<ServerParsedArgs>> = {
+ 
++	'locale': { type: 'string' },
++
+ 	/* ----- server setup ----- */
+ 
+ 	'host': { type: 'string', cat: 'o', args: 'ip-address', description: nls.localize('host', "The host name or IP address the server should listen to. If not set, defaults to 'localhost'.") },
+@@ -97,6 +99,8 @@ export const serverOptions: OptionDescri
+ 
+ export interface ServerParsedArgs {
+ 
++	'locale'?: string;
++
+ 	/* ----- server setup ----- */
+ 
+ 	host?: string;
+Index: sagemaker-code-editor/vscode/src/vs/workbench/workbench.web.main.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/workbench.web.main.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/workbench.web.main.ts
+@@ -52,7 +52,7 @@ import 'vs/workbench/services/dialogs/br
+ import 'vs/workbench/services/host/browser/browserHostService';
+ import 'vs/workbench/services/lifecycle/browser/lifecycleService';
+ import 'vs/workbench/services/clipboard/browser/clipboardService';
+-import 'vs/workbench/services/localization/browser/localeService';
++import 'vs/workbench/services/localization/electron-sandbox/localeService';
+ import 'vs/workbench/services/path/browser/pathService';
+ import 'vs/workbench/services/themes/browser/browserHostColorSchemeService';
+ import 'vs/workbench/services/encryption/browser/encryptionService';
+@@ -118,8 +118,9 @@ registerSingleton(ILanguagePackService,
+ // Logs
+ import 'vs/workbench/contrib/logs/browser/logs.contribution';
+ 
+-// Localization
+-import 'vs/workbench/contrib/localization/browser/localization.contribution';
++// Localization.  This does not actually import anything specific to Electron so
++// it should be safe.
++import 'vs/workbench/contrib/localization/electron-sandbox/localization.contribution';
+ 
+ // Performance
+ import 'vs/workbench/contrib/performance/browser/performance.web.contribution';
+Index: sagemaker-code-editor/vscode/src/vs/workbench/services/localization/electron-sandbox/localeService.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/services/localization/electron-sandbox/localeService.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/services/localization/electron-sandbox/localeService.ts
+@@ -51,7 +51,8 @@ class NativeLocaleService implements ILo
+ 		@IProductService private readonly productService: IProductService
+ 	) { }
+ 
+-	private async validateLocaleFile(): Promise<boolean> {
++	// Make public just so we do not have to patch all the unused code out.
++	public async validateLocaleFile(): Promise<boolean> {
+ 		try {
+ 			const content = await this.textFileService.read(this.environmentService.argvResource, { encoding: 'utf8' });
+ 
+@@ -78,9 +79,6 @@ class NativeLocaleService implements ILo
+ 	}
+ 
+ 	private async writeLocaleValue(locale: string | undefined): Promise<boolean> {
+-		if (!(await this.validateLocaleFile())) {
+-			return false;
+-		}
+ 		await this.jsonEditingService.write(this.environmentService.argvResource, [{ path: ['locale'], value: locale }], true);
+ 		return true;
+ 	}
+Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
+@@ -341,9 +341,6 @@ export class InstallAction extends Exten
+ 		if (this.extension.isBuiltin) {
+ 			return;
+ 		}
+-		if (this.extensionsWorkbenchService.canSetLanguage(this.extension)) {
+-			return;
+-		}
+ 		if (this.extension.state === ExtensionState.Uninstalled && await this.extensionsWorkbenchService.canInstall(this.extension)) {
+ 			this.enabled = this.options.installPreReleaseVersion ? this.extension.hasPreReleaseVersion : this.extension.hasReleaseVersion;
+ 			this.updateLabel();
+@@ -614,7 +611,7 @@ export abstract class InstallInOtherServ
+ 		}
+ 
+ 		if (isLanguagePackExtension(this.extension.local.manifest)) {
+-			return true;
++			return false;
+ 		}
+ 
+ 		// Prefers to run on UI
+@@ -1848,17 +1845,6 @@ export class SetLanguageAction extends E
+ 	update(): void {
+ 		this.enabled = false;
+ 		this.class = SetLanguageAction.DisabledClass;
+-		if (!this.extension) {
+-			return;
+-		}
+-		if (!this.extensionsWorkbenchService.canSetLanguage(this.extension)) {
+-			return;
+-		}
+-		if (this.extension.gallery && language === getLocale(this.extension.gallery)) {
+-			return;
+-		}
+-		this.enabled = true;
+-		this.class = SetLanguageAction.EnabledClass;
+ 	}
+ 
+ 	override async run(): Promise<any> {
+@@ -1875,7 +1861,6 @@ export class ClearLanguageAction extends
+ 	private static readonly DisabledClass = `${ClearLanguageAction.EnabledClass} disabled`;
+ 
+ 	constructor(
+-		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
+ 		@ILocaleService private readonly localeService: ILocaleService,
+ 	) {
+ 		super(ClearLanguageAction.ID, ClearLanguageAction.TITLE.value, ClearLanguageAction.DisabledClass, false);
+@@ -1885,17 +1870,6 @@ export class ClearLanguageAction extends
+ 	update(): void {
+ 		this.enabled = false;
+ 		this.class = ClearLanguageAction.DisabledClass;
+-		if (!this.extension) {
+-			return;
+-		}
+-		if (!this.extensionsWorkbenchService.canSetLanguage(this.extension)) {
+-			return;
+-		}
+-		if (this.extension.gallery && language !== getLocale(this.extension.gallery)) {
+-			return;
+-		}
+-		this.enabled = true;
+-		this.class = ClearLanguageAction.EnabledClass;
+ 	}
+ 
+ 	override async run(): Promise<any> {
