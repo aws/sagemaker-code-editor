@@ -12,3 +12,4 @@ terminal-crash-mitigation.patch
 sagemaker-open-notebook-extension.patch
 security.diff
 sagemaker-ui-env.patch
+sagemaker-ui-domain-role.patch
