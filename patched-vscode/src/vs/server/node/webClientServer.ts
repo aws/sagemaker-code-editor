@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createReadStream } from 'fs';
+import { createReadStream, existsSync, writeFileSync } from 'fs';
 import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
 import * as path from 'path';
@@ -30,6 +30,7 @@ import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
 import { CharCode } from 'vs/base/common/charCode';
 import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
+import { fromIni } from "@aws-sdk/credential-providers"
 
 const textMimeType: { [ext: string]: string | undefined } = {
 	'.html': 'text/html',
@@ -102,6 +103,8 @@ export class WebClientServer {
 	private readonly _callbackRoute: string;
 	private readonly _webExtensionRoute: string;
 	private readonly _idleRoute: string;
+	private readonly _envMetadata: string;
+	private readonly _derCreds: string;
 
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
@@ -118,6 +121,8 @@ export class WebClientServer {
 		this._callbackRoute = `${serverRootPath}/callback`;
 		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
 		this._idleRoute = '/api/idle';
+		this._envMetadata = '/api/env';
+		this._derCreds = '/api/creds';
 	}
 
 	/**
@@ -145,6 +150,12 @@ export class WebClientServer {
 			if (pathname.startsWith(this._webExtensionRoute) && pathname.charCodeAt(this._webExtensionRoute.length) === CharCode.Slash) {
 				// extension resource support
 				return this._handleWebExtensionResource(req, res, parsedUrl);
+			}
+			if (pathname === this._envMetadata) {
+				return this._handleEnvMetadata(req, res);
+			}
+			if (pathname === this._derCreds) {
+				return this._handleDERCreds(req, res);
 			}
 
 			return serveError(req, res, 404, 'Not found.');
@@ -459,12 +470,20 @@ export class WebClientServer {
 	}
 
 	/**
- 	 * Handles API requests to retrieve the last activity timestamp.
-   */
+	 * Handles API requests to retrieve the last activity timestamp.
+	 */
 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 		try {
 			const tmpDirectory = '/tmp/'
 			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
+
+			// If idle shutdown file does not exist, this indicates the app UI may never been opened
+			// Create the initial metadata file
+			if (!existsSync(idleFilePath)) {
+				const timestamp = new Date().toISOString();
+				writeFileSync(idleFilePath, timestamp);
+			}
+
 			const data = await readFile(idleFilePath, 'utf8');
 
 			res.statusCode = 200;
@@ -472,6 +491,49 @@ export class WebClientServer {
 			res.end(JSON.stringify({ lastActiveTimestamp: data }));
 		} catch (error) {
 			serveError(req, res, 500, error.message)
+		}
+	}
+
+	/**
+	 * Handles API requests to retrieve the /opt/ml/metadata/resource-metadata.json file.
+	 */
+	private async _handleEnvMetadata(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		try {
+			const envMetadataDirectory = '/opt/ml/metadata/';
+			const envMetadataFilePath = path.join(envMetadataDirectory, 'resource-metadata.json');
+			if (existsSync(envMetadataFilePath)) {
+				const envMetadata = await readFile(envMetadataFilePath, 'utf8');
+				res.statusCode = 200;
+				res.setHeader('Content-Type', 'application/json');
+				res.end(envMetadata);
+			} else {
+				serveError(req, res, 500, 'No metadata file at ' + envMetadataFilePath);
+			}
+		} catch (error) {
+			serveError(req, res, 500, error.message);
+		}
+	}
+
+	/**
+	 * Handles API requests to retrieve the /opt/ml/metadata/resource-metadata.json file.
+	 */
+	private async _handleDERCreds(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		try {
+			const derCreds = await fromIni({
+				profile: "DomainExecutionRoleCreds"
+			})();
+			const creds = {
+				access_key: derCreds.accessKeyId,
+				secret_key: derCreds.secretAccessKey,
+				session_token: derCreds.sessionToken
+			};
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');
+			res.setHeader('Cache-Control', 'no-store');
+			res.setHeader('Expires', '0');
+			res.end(JSON.stringify(creds));
+		} catch (error) {
+			serveError(req, res, 500, error.message);
 		}
 	}
 }
