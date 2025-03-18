@@ -281,3 +281,150 @@ export function typeInTerminal(command: string) {
                 .eq(-1)
 		.type(`${command}{enter}`);
 }
+
+
+function handleExistsDialog() {
+	return cy.get('body', { timeout: 20000 }).then($body => {
+		if ($body.find('.quick-input-widget:contains("already exists")').length > 0) {
+			cy.log("Found 'already exists' dialog");
+			return cy.get('.quick-input-widget')
+				.contains('OK')
+				.should('be.visible')
+				.click();
+		}
+	});
+}
+
+
+export function createJupyterNotebook(filename: string) {
+	// Close all files (open files cause errors)
+    execVSCodeQuickInput('>View: Close All Editors');
+    cy.wait(5000);
+
+	// Handle "Do you want to save the changes" dialog if it appears
+    cy.get('body').then($body => {
+        if ($body.find('.monaco-dialog-modal-block').length > 0) {
+            cy.get('.monaco-dialog-modal-block')
+                .contains('Don\'t Save')
+                .click();
+            cy.wait(2000);
+        }
+    });
+
+    // Create new Jupyter Notebook and wait until the file opens
+    execVSCodeQuickInput('>Create: New Jupyter Notebook');
+    cy.wait(5000);
+    
+    // Save the file using command palette
+    execVSCodeQuickInput('>File: Save As');
+    
+    // Handle the save dialog
+    cy.get('.quick-input-widget.show-file-icons', { timeout: 10000 })
+        .should('be.visible')
+        .find('.input')
+        .should('be.visible')
+        .and('not.be.disabled')
+		.wait(3000)
+        .type(filename, { delay: 300 });
+
+    // Click OK when prompted "This file already exists, are you sure you want to overwrite?"
+    cy.get('.quick-input-widget.show-file-icons')
+        .find('a.monaco-button.monaco-text-button')
+        .contains('OK')
+        .should('be.visible')
+        .click();
+
+	// Wait for the dialogue box to appear
+	cy.wait(4000);
+
+	// Usage in main function
+	cy.get('body', { timeout: 10000 }).then($body => {
+		if ($body.find('.quick-input-widget:contains("already exists")').length > 0) {
+			handleExistsDialog();
+		}
+	});
+}
+
+
+export function typeAndExecuteInNotebook(command: string, filename: string) {
+    cy.wait(5000);
+
+    // Wait for notebook to load and be ready
+    cy.get('.notebook-editor', { timeout: 15000 })
+        .should('be.visible');
+
+	cy.wait(5000);
+
+	cy.get('body').then($body => {
+        if ($body.find('.kernel-label:contains("Select Kernel")').length > 0) {
+            // Click kernel selector
+            cy.get('.kernel-label')
+                .contains('Select Kernel')
+                .click();
+			
+            // Click "Python Environments"
+            cy.contains('Python Environments')
+                .should('be.visible')
+                .click();
+
+            // Select base Python environment
+            cy.contains('conda (Python 3')
+                .should('be.visible')
+                .click();
+			
+			cy.wait(10000);
+        }
+    });
+
+    // Handle the editor with the overlapping elements
+    cy.get('.monaco-editor')
+        .first()
+        .should('be.visible')
+        .then($editor => {
+            // Remove the overlapping view-line
+            cy.wrap($editor)
+                .find('.view-line')
+                .invoke('css', 'pointer-events', 'none');
+
+            // Now invoke the inputarea and type on it
+            cy.wrap($editor)
+                .find('.inputarea')
+                .invoke('css', {
+                    'position': 'relative',
+                    'z-index': '9999',
+                    'opacity': '1'
+                })
+                .should('be.visible')
+                .click({ force: true })
+                .type(command, {
+                    delay: 200,
+                    force: true
+                });
+
+			cy.wrap($editor)
+				.type('{shift+enter}');
+        });
+
+		// cy.get('body').type('{ctrl+enter}');
+    		cy.wait(5000);
+
+		cy.get('.notebook-editor')
+        	.should('contain', 'hello');
+
+		// Optional: wait a bit more to ensure execution is fully complete
+		cy.wait(2000);
+
+    // Close all files
+    execVSCodeQuickInput('>View: Close All Editors');
+    cy.wait(5000);
+
+	// Handle "Do you want to save the changes" dialog if it appears
+	cy.get('body').then($body => {
+        if ($body.find('.monaco-dialog-modal-block').length > 0) {
+            cy.get('.monaco-dialog-modal-block')
+                .contains('Don\'t Save')
+                .click();
+            cy.wait(2000);
+        }
+    });
+}
