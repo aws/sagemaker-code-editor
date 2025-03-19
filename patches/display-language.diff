@@ -169,20 +169,56 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/remoteLanguagePacks.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
-@@ -32,6 +32,12 @@ export function getNLSConfiguration(lang
- 				if (InternalNLSConfiguration.is(value)) {
- 					value._languagePackSupport = true;
- 				}
-+				// If the configuration has no results keep trying since code-server
-+				// doesn't restart when a language is installed so this result would
-+				// persist (the plugin might not be installed yet for example).
-+				if (value.locale !== 'en' && value.locale !== 'en-us' && Object.keys(value.availableLanguages).length === 0) {
-+					_cache.delete(key);
-+				}
- 				return value;
- 			});
- 			_cache.set(key, result);
-@@ -46,3 +52,43 @@ export namespace InternalNLSConfiguratio
+@@ -18,26 +18,28 @@ function exists(file: string) {
+ }
+ 
+ export function getNLSConfiguration(language: string, userDataPath: string): Promise<lp.NLSConfiguration> {
+-	return exists(metaData).then((fileExists) => {
+-		if (!fileExists || !product.commit) {
+-			// console.log(`==> MetaData or commit unknown. Using default language.`);
+-			// The OS Locale on the remote side really doesn't matter, so we return the default locale
+-			return Promise.resolve({ locale: 'en', osLocale: 'en', availableLanguages: {} });
+-		}
+-		const key = `${language}||${userDataPath}`;
+-		let result = _cache.get(key);
+-		if (!result) {
+-			// The OS Locale on the remote side really doesn't matter, so we pass in the same language
+-			result = lp.getNLSConfiguration(product.commit, userDataPath, metaData, language, language).then(value => {
+-				if (InternalNLSConfiguration.is(value)) {
+-					value._languagePackSupport = true;
+-				}
+-				return value;
+-			});
+-			_cache.set(key, result);
+-		}
+-		return result;
+-	});
++	console.log("metadata file: ", metaData);
++
++	const key = `${language}||${userDataPath}`;
++	let result = _cache.get(key);
++	if (!result) {
++		// The OS Locale on the remote side really doesn't matter, so we pass in the same language
++		result = lp.getNLSConfiguration(product.commit, userDataPath, metaData, language, language).then(value => {
++			if (InternalNLSConfiguration.is(value)) {
++				value._languagePackSupport = true;
++			}
++			// If the configuration has no results keep trying since code-server
++			// doesn't restart when a language is installed so this result would
++			// persist (the plugin might not be installed yet for example).
++			if (value.locale !== 'en' && value.locale !== 'en-us' && Object.keys(value.availableLanguages).length === 0) {
++				_cache.delete(key);
++			}
++			return value;
++		});
++		_cache.set(key, result);
++	}
++	console.log("result: ", result);
++	return result;
+ }
+ 
+ export namespace InternalNLSConfiguration {
+@@ -46,3 +48,43 @@ export namespace InternalNLSConfiguratio
  		return candidate && typeof candidate._languagePackId === 'string';
  	}
  }
