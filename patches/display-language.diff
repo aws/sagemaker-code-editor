@@ -204,7 +204,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
 +	let result = _cache.get(key);
 +	if (!result) {
 +		// The OS Locale on the remote side really doesn't matter, so we pass in the same language
-+		result = lp.getNLSConfiguration(product.commit, userDataPath, metaData, language, language).then(value => {
++		result = lp.getNLSConfiguration("dummy_commmit", userDataPath, metaData, language, language).then(value => {
 +			if (InternalNLSConfiguration.is(value)) {
 +				value._languagePackSupport = true;
 +			}
