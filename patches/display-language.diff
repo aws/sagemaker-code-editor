@@ -169,7 +169,12 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/remoteLanguagePacks.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
-@@ -13,31 +13,29 @@ import product from 'vs/platform/product
+@@ -8,36 +8,33 @@ import { FileAccess } from 'vs/base/comm
+ import * as path from 'vs/base/common/path';
+ 
+ import * as lp from 'vs/base/node/languagePacks';
+-import product from 'vs/platform/product/common/product';
+ 
  const metaData = path.join(FileAccess.asFileUri('').fsPath, 'nls.metadata.json');
  const _cache: Map<string, Promise<lp.NLSConfiguration>> = new Map();
  
@@ -223,7 +228,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
  }
  
  export namespace InternalNLSConfiguration {
-@@ -46,3 +44,43 @@ export namespace InternalNLSConfiguratio
+@@ -46,3 +43,43 @@ export namespace InternalNLSConfiguratio
  		return candidate && typeof candidate._languagePackId === 'string';
  	}
  }
