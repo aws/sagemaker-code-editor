@@ -11,13 +11,17 @@ import {
     WARNING_BUTTON_SAVE_AND_RENEW_SESSION,
     SagemakerCookie,
     SagemakerResourceMetadata,
-    getExpiryTime
+    getExpiryTime,
+    getSmusVscodePortalUrl
 } from "./constant";
 import * as console from "console";
 
 
 const PARSE_SAGEMAKER_COOKIE_COMMAND = 'sagemaker.parseCookies';
 const ENABLE_AUTO_UPDATE_COMMAND = 'workbench.extensions.action.enableAutoUpdate';
+
+// Global redirect URL for SMUS environment
+let smusRedirectUrl: string | null = null;
 
 function showWarningDialog() {
     vscode.commands.executeCommand(PARSE_SAGEMAKER_COOKIE_COMMAND).then(response => {
@@ -59,11 +63,12 @@ function showWarningDialog() {
 }
 
 function signInError(sagemakerCookie: SagemakerCookie) {
+    const redirectUrl = getRedirectUrl(sagemakerCookie);
     // The session has expired
     SessionWarning.signInWarning(sagemakerCookie)
         .then((selection) => {
             if (selection === SIGN_IN_BUTTON) {
-                vscode.env.openExternal(vscode.Uri.parse(<string>sagemakerCookie.redirectURL));
+                vscode.env.openExternal(vscode.Uri.parse(redirectUrl));
             }
         });
 }
@@ -94,32 +99,31 @@ function saveWorkspace() {
     });
 }
 function renewSession(sagemakerCookie: SagemakerCookie) {
+    const redirectUrl = getRedirectUrl(sagemakerCookie);
     // TODO: Log and trigger a Signin
-    vscode.env.openExternal(vscode.Uri.parse(<string>sagemakerCookie.redirectURL));
+    vscode.env.openExternal(vscode.Uri.parse(redirectUrl));
     // Trigger the function to show the warning again after 5 minutes again to validate.
     setTimeout(showWarningDialog, FIVE_MINUTES_INTERVAL_MILLIS);
 }
 
 function updateStatusItemWithMetadata(context: vscode.ExtensionContext) {
-    fs.readFile(SAGEMAKER_METADATA_PATH, 'utf-8', (err, data) => {
-        if (err) {
-            // fail silently not to block users
-        } else {
-            try {
-                const jsonData = JSON.parse(data) as SagemakerResourceMetadata;
-                const spaceName = jsonData.SpaceName;
+    try {
+        const data = fs.readFileSync(SAGEMAKER_METADATA_PATH, 'utf-8');
+        const jsonData = JSON.parse(data) as SagemakerResourceMetadata;
 
-                if (spaceName != null) {
-                    let spaceNameStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-                    spaceNameStatusBarItem.text = `Space: ${spaceName}`;
-                    spaceNameStatusBarItem.show();
-                    context.subscriptions.push(spaceNameStatusBarItem);
-                }
-            } catch (jsonError) {
-                // fail silently not to block users
-            }
+        if (jsonData?.SpaceName) {
+            let spaceNameStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+            spaceNameStatusBarItem.text = `Space: ${jsonData.SpaceName}`;
+            spaceNameStatusBarItem.show();
+            context.subscriptions.push(spaceNameStatusBarItem);
         }
-    });
+
+        // Initialize SMUS redirect URL
+        smusRedirectUrl = getSmusVscodePortalUrl(jsonData);
+    } catch (error) {
+        // fail silently not to block users
+        console.error('Error reading metadata file:', error);
+    }
 }
 
 // Render warning message regarding auto upgrade disabled
@@ -158,15 +162,25 @@ export function activate(context: vscode.ExtensionContext) {
     // TODO: log activation of extension
     console.log('Activating Sagemaker Extension...');
 
+    // Initialize metadata first (which will set smusRedirectUrl if in SMUS environment)
+    updateStatusItemWithMetadata(context);
+
     // execute the get cookie command and save the data to cookies
     vscode.commands.executeCommand(PARSE_SAGEMAKER_COOKIE_COMMAND).then(r => {
 
         const sagemakerCookie: SagemakerCookie = r as SagemakerCookie
 
         initialize(sagemakerCookie);
-        updateStatusItemWithMetadata(context);
     });
 
     // render warning message regarding auto upgrade disabled
     renderExtensionAutoUpgradeDisabledNotification();
+}
+
+/**
+ * Returns the appropriate redirect URL based on the environment
+ * Uses SMUS URL if available, falls back to original redirect URL
+ */
+function getRedirectUrl(sagemakerCookie: SagemakerCookie): string {
+    return smusRedirectUrl || sagemakerCookie.redirectURL;
 }
