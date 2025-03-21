@@ -341,9 +341,6 @@ export class InstallAction extends ExtensionAction {
 		if (this.extension.isBuiltin) {
 			return;
 		}
-		if (this.extensionsWorkbenchService.canSetLanguage(this.extension)) {
-			return;
-		}
 		if (this.extension.state === ExtensionState.Uninstalled && await this.extensionsWorkbenchService.canInstall(this.extension)) {
 			this.enabled = this.options.installPreReleaseVersion ? this.extension.hasPreReleaseVersion : this.extension.hasReleaseVersion;
 			this.updateLabel();
@@ -614,7 +611,7 @@ export abstract class InstallInOtherServerAction extends ExtensionAction {
 		}
 
 		if (isLanguagePackExtension(this.extension.local.manifest)) {
-			return true;
+			return false;
 		}
 
 		// Prefers to run on UI
@@ -1848,17 +1845,6 @@ export class SetLanguageAction extends ExtensionAction {
 	update(): void {
 		this.enabled = false;
 		this.class = SetLanguageAction.DisabledClass;
-		if (!this.extension) {
-			return;
-		}
-		if (!this.extensionsWorkbenchService.canSetLanguage(this.extension)) {
-			return;
-		}
-		if (this.extension.gallery && language === getLocale(this.extension.gallery)) {
-			return;
-		}
-		this.enabled = true;
-		this.class = SetLanguageAction.EnabledClass;
 	}
 
 	override async run(): Promise<any> {
@@ -1875,7 +1861,6 @@ export class ClearLanguageAction extends ExtensionAction {
 	private static readonly DisabledClass = `${ClearLanguageAction.EnabledClass} disabled`;
 
 	constructor(
-		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@ILocaleService private readonly localeService: ILocaleService,
 	) {
 		super(ClearLanguageAction.ID, ClearLanguageAction.TITLE.value, ClearLanguageAction.DisabledClass, false);
@@ -1885,17 +1870,6 @@ export class ClearLanguageAction extends ExtensionAction {
 	update(): void {
 		this.enabled = false;
 		this.class = ClearLanguageAction.DisabledClass;
-		if (!this.extension) {
-			return;
-		}
-		if (!this.extensionsWorkbenchService.canSetLanguage(this.extension)) {
-			return;
-		}
-		if (this.extension.gallery && language !== getLocale(this.extension.gallery)) {
-			return;
-		}
-		this.enabled = true;
-		this.class = ClearLanguageAction.EnabledClass;
 	}
 
 	override async run(): Promise<any> {

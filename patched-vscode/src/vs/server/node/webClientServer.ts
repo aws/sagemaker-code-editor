@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createReadStream } from 'fs';
+import { createReadStream, existsSync, writeFileSync } from 'fs';
 import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
 import * as path from 'path';
@@ -28,6 +28,7 @@ import { URI } from 'vs/base/common/uri';
 import { streamToBuffer } from 'vs/base/common/buffer';
 import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
+import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
 import { CharCode } from 'vs/base/common/charCode';
 import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
 
@@ -351,6 +352,8 @@ export class WebClientServer {
 			callbackRoute: this._callbackRoute
 		};
 
+		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource.fsPath);
+		const nlsConfiguration = await getNLSConfiguration(locale, this._environmentService.userDataPath)
 		const nlsBaseUrl = this._productService.extensionsGallery?.nlsBaseUrl;
 		const values: { [key: string]: string } = {
 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
@@ -359,6 +362,7 @@ export class WebClientServer {
 			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
 			BASE: base,
 			VS_BASE: vscodeBase,
+			NLS_CONFIGURATION: asJSON(nlsConfiguration),
 		};
 
 		if (useTestResolver) {
@@ -390,7 +394,7 @@ export class WebClientServer {
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
 			'style-src \'self\' \'unsafe-inline\';',
-			'connect-src \'self\' ws: wss: https:;',
+		        'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://*.blob.core.windows.net https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;',	
 			'font-src \'self\' blob:;',
 			'manifest-src \'self\';'
 		].join(' ');
@@ -465,6 +469,14 @@ export class WebClientServer {
 		try {
 			const tmpDirectory = '/tmp/'
 			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
+
+			// If idle shutdown file does not exist, this indicates the app UI may never been opened
+			// Create the initial metadata file
+			if (!existsSync(idleFilePath)) {
+				const timestamp = new Date().toISOString();
+				writeFileSync(idleFilePath, timestamp);
+			}
+
 			const data = await readFile(idleFilePath, 'utf8');
 
 			res.statusCode = 200;

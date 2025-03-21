@@ -52,7 +52,7 @@ import 'vs/workbench/services/dialogs/browser/fileDialogService';
 import 'vs/workbench/services/host/browser/browserHostService';
 import 'vs/workbench/services/lifecycle/browser/lifecycleService';
 import 'vs/workbench/services/clipboard/browser/clipboardService';
-import 'vs/workbench/services/localization/browser/localeService';
+import 'vs/workbench/services/localization/electron-sandbox/localeService';
 import 'vs/workbench/services/path/browser/pathService';
 import 'vs/workbench/services/themes/browser/browserHostColorSchemeService';
 import 'vs/workbench/services/encryption/browser/encryptionService';
@@ -118,8 +118,9 @@ registerSingleton(ILanguagePackService, WebLanguagePacksService, InstantiationTy
 // Logs
 import 'vs/workbench/contrib/logs/browser/logs.contribution';
 
-// Localization
-import 'vs/workbench/contrib/localization/browser/localization.contribution';
+// Localization.  This does not actually import anything specific to Electron so
+// it should be safe.
+import 'vs/workbench/contrib/localization/electron-sandbox/localization.contribution';
 
 // Performance
 import 'vs/workbench/contrib/performance/browser/performance.web.contribution';
