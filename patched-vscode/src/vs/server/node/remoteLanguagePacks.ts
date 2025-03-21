@@ -17,7 +17,11 @@ export function getNLSConfiguration(language: string, userDataPath: string): Pro
 	let result = _cache.get(key);
 	if (!result) {
 		// The OS Locale on the remote side really doesn't matter, so we pass in the same language
+<<<<<<< HEAD
 		result = lp.getNLSConfiguration("dummy_commit", userDataPath, metaData, language, language).then(value => {
+=======
+		result = lp.getNLSConfiguration("dummy_commmit", userDataPath, metaData, language, language).then(value => {
+>>>>>>> 34c670ba (Update patched-vscode)
 			if (InternalNLSConfiguration.is(value)) {
 				value._languagePackSupport = true;
 			}
@@ -79,4 +83,8 @@ const stripComments = (content: string): string => {
 			return match;
 		}
 	});
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 34c670ba (Update patched-vscode)

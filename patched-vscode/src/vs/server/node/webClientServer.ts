@@ -3,13 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+<<<<<<< HEAD
 import { createReadStream, promises, existsSync, writeFileSync } from 'fs';
+=======
+import { createReadStream, existsSync, writeFileSync } from 'fs';
+import {readFile } from 'fs/promises';
+import { Promises } from 'vs/base/node/pfs';
+import * as path from 'path';
+>>>>>>> 34c670ba (Update patched-vscode)
 import * as http from 'http';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as url from 'url';
 import * as cookie from 'cookie';
 import * as crypto from 'crypto';
+<<<<<<< HEAD
 import { isEqualOrParent } from '../../base/common/extpath.js';
 import { getMediaMime } from '../../base/common/mime.js';
 import { isLinux } from '../../base/common/platform.js';
@@ -30,6 +38,28 @@ import { isString, Mutable } from '../../base/common/types.js';
 import { CharCode } from '../../base/common/charCode.js';
 import { IExtensionManifest } from '../../platform/extensions/common/extensions.js';
 import { ICSSDevelopmentService } from '../../platform/cssDev/node/cssDevService.js';
+=======
+import { isEqualOrParent } from 'vs/base/common/extpath';
+import { getMediaMime } from 'vs/base/common/mime';
+import { isLinux } from 'vs/base/common/platform';
+import { ILogService } from 'vs/platform/log/common/log';
+import { IServerEnvironmentService } from 'vs/server/node/serverEnvironmentService';
+import { extname, dirname, join, normalize } from 'vs/base/common/path';
+import { FileAccess, connectionTokenCookieName, connectionTokenQueryName, Schemas, builtinExtensionsPath } from 'vs/base/common/network';
+import { generateUuid } from 'vs/base/common/uuid';
+import { IProductService } from 'vs/platform/product/common/productService';
+import { ServerConnectionToken, ServerConnectionTokenType } from 'vs/server/node/serverConnectionToken';
+import { asTextOrError, IRequestService } from 'vs/platform/request/common/request';
+import { IHeaders } from 'vs/base/parts/request/common/request';
+import { CancellationToken } from 'vs/base/common/cancellation';
+import { URI } from 'vs/base/common/uri';
+import { streamToBuffer } from 'vs/base/common/buffer';
+import { IProductConfiguration } from 'vs/base/common/product';
+import { isString } from 'vs/base/common/types';
+import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
+import { CharCode } from 'vs/base/common/charCode';
+import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
+>>>>>>> 34c670ba (Update patched-vscode)
 
 const textMimeType: { [ext: string]: string | undefined } = {
 	'.html': 'text/html',
@@ -378,6 +408,7 @@ export class WebClientServer {
 			callbackRoute: callbackRoute
 		};
 
+<<<<<<< HEAD
 		const cookies = cookie.parse(req.headers.cookie || '');
 		const locale = cookies['vscode.nls.locale'] || req.headers['accept-language']?.split(',')[0]?.toLowerCase() || 'en';
 		let WORKBENCH_NLS_BASE_URL: string | undefined;
@@ -395,6 +426,19 @@ export class WebClientServer {
 			WORKBENCH_WEB_BASE_URL: staticRoute,
 			WORKBENCH_NLS_URL,
 			WORKBENCH_NLS_FALLBACK_URL: `${staticRoute}/out/nls.messages.js`
+=======
+		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource.fsPath);
+		const nlsConfiguration = await getNLSConfiguration(locale, this._environmentService.userDataPath)
+		const nlsBaseUrl = this._productService.extensionsGallery?.nlsBaseUrl;
+		const values: { [key: string]: string } = {
+			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
+			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
+			WORKBENCH_WEB_BASE_URL: vscodeBase + this._staticRoute,
+			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
+			BASE: base,
+			VS_BASE: vscodeBase,
+			NLS_CONFIGURATION: asJSON(nlsConfiguration),
+>>>>>>> 34c670ba (Update patched-vscode)
 		};
 
 		// DEV ---------------------------------------------------------------------------------------
@@ -436,7 +480,11 @@ export class WebClientServer {
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
 			'style-src \'self\' \'unsafe-inline\';',
+<<<<<<< HEAD
 			'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://openvsxorg.blob.core.windows.net https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;',
+=======
+		        'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://*.blob.core.windows.net https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;',	
+>>>>>>> 34c670ba (Update patched-vscode)
 			'font-src \'self\' blob:;',
 			'manifest-src \'self\';'
 		].join(' ');
@@ -505,12 +553,30 @@ export class WebClientServer {
 	}
 
 	/**
+<<<<<<< HEAD
 	 * Handles API requests to run the post-startup script in SMD.
 	 */
 	private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 		const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
 		const logPath = '/var/log/apps/post_startup_default.log';
 		const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+=======
+ 	 * Handles API requests to retrieve the last activity timestamp.
+   */
+	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		try {
+			const tmpDirectory = '/tmp/'
+			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
+
+			// If idle shutdown file does not exist, this indicates the app UI may never been opened
+			// Create the initial metadata file
+			if (!existsSync(idleFilePath)) {
+				const timestamp = new Date().toISOString();
+				writeFileSync(idleFilePath, timestamp);
+			}
+
+			const data = await readFile(idleFilePath, 'utf8');
+>>>>>>> 34c670ba (Update patched-vscode)
 
 		// Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
 		if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {

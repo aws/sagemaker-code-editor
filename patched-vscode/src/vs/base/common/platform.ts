@@ -108,9 +108,16 @@ else if (typeof navigator === 'object' && !isElectronRenderer) {
 	_isLinux = _userAgent.indexOf('Linux') >= 0;
 	_isMobile = _userAgent?.indexOf('Mobi') >= 0;
 	_isWeb = true;
+<<<<<<< HEAD
 	_locale = LANGUAGE_DEFAULT;
  	_language = _locale;
  	_platformLocale = navigator.language;
+=======
+
+	_locale = LANGUAGE_DEFAULT;
+	_language = _locale;
+	_platformLocale = navigator.language;
+>>>>>>> 34c670ba (Update patched-vscode)
 	const el = typeof document !== 'undefined' && document.getElementById('vscode-remote-nls-configuration');
 	const rawNlsConfig = el && el.getAttribute('data-settings');
 	if (rawNlsConfig) {
