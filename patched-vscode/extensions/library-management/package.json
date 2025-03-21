@@ -1,0 +1,59 @@
+{
+  "name": "library-management",
+  "displayName": "library-management",
+  "description": "Library Management extension for SageMaker Unified Studio Code Editor",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.73.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "webview.libmgmt",
+        "title": ".libs.json"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "npm run compile-extension && npm run compile-web-ui",
+    "compile-extension": "gulp compile-extension:library-management",
+    "compile-web": "npm run compile-web-extension && npm run compile-web-ui",
+    "compile-web-extension": "npx webpack-cli --config webpack.config.js --mode production",
+    "compile-web-ui": "npm run build --prefix web",
+    "watch": "npm run watch-extension & npm run watch-web-ui",
+    "watch-extension": "npm run build-preview && gulp watch-extension:library-management",
+    "watch-web": "npm run watch-web-extension & npm run watch-web-ui",
+    "watch-web-extension": "npx webpack-cli --config webpack.config.js --mode development --watch",
+    "watch-web-ui": "npm run watch --prefix web",
+    "vscode:prepublish": "echo Running build-ext && npm run build-ext && echo Running compile-web-ui && npm run compile-web-ui",
+    "build-ext": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:library-management",
+    "build-preview": "node ./esbuild-preview.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.73.0",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.25.1",
+    "eslint": "^9.21.0",
+    "gulp": "^4.0.2",
+    "gulp-patch": "^0.1.4",
+    "gulp-sourcemaps": "^3.0.0",
+    "gulp-typescript": "^6.0.0-alpha.1",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.7.3",
+    "webpack": "^5.98.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1"
+  }
+}

@@ -1,0 +1,17 @@
+.vscode/**
+.vscode-test/**
+out/**
+**/node_modules/**
+web/node_modules/**
+web/.parcel-cache/**
+src/**
+.gitignore
+.yarnrc
+web/.DS_Store
+webpack.config.js
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/eslint.config.mjs
+**/*.map
+**/*.ts
+**/.vscode-test.*
