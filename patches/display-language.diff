@@ -1,3 +1,22 @@
+Add display language support
+
+We can remove this once upstream supports all language packs.
+
+1. Proxies language packs to the service on the backend.
+2. NLS configuration is embedded into the HTML for the browser to pick up.  This
+   code to generate this configuration is copied from the native portion.
+3. Remove configuredLocale since we have our own thing.
+4. Move the argv.json file to the server instead of in-browser storage.  This is
+   where the current locale is stored and currently the server needs to be able
+   to read it.
+5. Add the locale flag.
+6. Remove the redundant locale verification.  It does the same as the existing
+   one but is worse because it does not handle non-existent or empty files.
+7. Replace some caching and Node requires because code-server does not restart
+   when changing the language unlike native Code.
+8. Make language extensions installable like normal rather than using the
+   special set/clear language actions.
+
 Index: sagemaker-code-editor/vscode/src/vs/platform/languagePacks/browser/languagePacks.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/languagePacks/browser/languagePacks.ts
