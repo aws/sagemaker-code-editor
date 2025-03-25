@@ -11,3 +11,4 @@ sagemaker-idle-extension.patch
 terminal-crash-mitigation.patch
 sagemaker-open-notebook-extension.patch
 security.diff
+sagemaker-ui-dark-theme.patch

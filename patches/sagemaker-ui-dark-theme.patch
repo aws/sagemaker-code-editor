@@ -1,0 +1,238 @@
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/.vscodeignore
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/.vscodeignore
+@@ -0,0 +1,12 @@
++.vscode/**
++.vscode-test/**
++out/test/**
++out/**
++test/**
++src/**
++tsconfig.json
++out/test/**
++out/**
++cgmanifest.json
++yarn.lock
++preview-src/**
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/README.md
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/README.md
+@@ -0,0 +1 @@
++# SageMaker UI Dark Theme
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/extension-browser.webpack.config.js
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/extension-browser.webpack.config.js
+@@ -0,0 +1,17 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright Amazon.com Inc. or its affiliates. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++//@ts-check
++
++'use strict';
++
++const withBrowserDefaults = require('../shared.webpack.config').browser;
++
++module.exports = withBrowserDefaults({
++    context: __dirname,
++    entry: {
++        extension: './src/extension.ts'
++    },
++});
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/extension.webpack.config.js
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/extension.webpack.config.js
+@@ -0,0 +1,20 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright Amazon.com Inc. or its affiliates. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++//@ts-check
++
++'use strict';
++
++const withDefaults = require('../shared.webpack.config');
++
++module.exports = withDefaults({
++    context: __dirname,
++    resolve: {
++        mainFields: ['module', 'main']
++    },
++    entry: {
++        extension: './src/extension.ts',
++    }
++});
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/src/extension.ts
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/src/extension.ts
+@@ -0,0 +1,51 @@
++import * as vscode from 'vscode';
++
++const SERVICE_NAME_ENV_KEY = 'SERVICE_NAME';
++const SERVICE_NAME_ENV_VALUE = 'SageMakerUnifiedStudio';
++const DEFAULT_THEME = 'Default Dark Modern';
++
++let outputChannel: vscode.OutputChannel;
++
++export function activate() {
++    // Check if in SageMaker Unified Studio
++    const envValue = process.env[SERVICE_NAME_ENV_KEY];
++    if (!envValue || envValue !== SERVICE_NAME_ENV_VALUE) {
++        return;
++    }
++
++    const config = vscode.workspace.getConfiguration();
++    const themeConfig = config.inspect('workbench.colorTheme');
++    outputChannel = vscode.window.createOutputChannel('SageMaker UI Dark Theme');
++
++    outputChannel.appendLine(`Current theme configuration: ${JSON.stringify(themeConfig, null, 2)}`);
++
++    // Check if theme is only set at default level
++    if (themeConfig?.globalValue === undefined &&
++        themeConfig?.workspaceValue === undefined &&
++        themeConfig?.workspaceFolderValue === undefined) {
++
++        outputChannel.appendLine('Theme only set at default level, applying theme update');
++
++        // Update the configuration
++        Promise.resolve(
++            config.update('workbench.colorTheme', DEFAULT_THEME, vscode.ConfigurationTarget.Global)
++                .then(() => {
++                    outputChannel.appendLine(`Theme configuration updated to ${DEFAULT_THEME}`);
++                    // Reload to apply theme
++                    return vscode.commands.executeCommand('workbench.action.reloadWindow');
++                })
++                .then(() => outputChannel.appendLine('Theme applied successfully'))
++        )
++        .catch((error) => {
++            outputChannel.appendLine(`Failed to apply theme: ${error}`);
++        });
++    } else {
++        outputChannel.appendLine('Theme already configured in user or workspace settings, not overriding');
++    }
++}
++
++export function deactivate() {
++    if (outputChannel) {
++        outputChannel.dispose();
++    }
++}
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/tsconfig.json
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/tsconfig.json
+@@ -0,0 +1,10 @@
++{
++	"extends": "../tsconfig.base.json",
++	"compilerOptions": {
++		"outDir": "./out"
++	},
++	"include": [
++		"src/**/*",
++		"../../src/vscode-dts/vscode.d.ts"
++	]
++}
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/yarn.lock
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/yarn.lock
+@@ -0,0 +1,4 @@
++# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
++# yarn lockfile v1
++
++
+Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
+===================================================================
+--- sagemaker-code-editor.orig/vscode/build/gulpfile.extensions.js
++++ sagemaker-code-editor/vscode/build/gulpfile.extensions.js
+@@ -64,6 +64,7 @@ const compilations = [
+ 	'extensions/sagemaker-idle-extension/tsconfig.json',
+ 	'extensions/sagemaker-terminal-crash-mitigation/tsconfig.json',
+ 	'extensions/sagemaker-open-notebook-extension/tsconfig.json',
++	'extensions/sagemaker-ui-dark-theme/tsconfig.json',
+ 	'extensions/tunnel-forwarding/tsconfig.json',
+ 	'extensions/typescript-language-features/test-workspace/tsconfig.json',
+ 	'extensions/typescript-language-features/web/tsconfig.json',
+Index: sagemaker-code-editor/vscode/build/npm/dirs.js
+===================================================================
+--- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
++++ sagemaker-code-editor/vscode/build/npm/dirs.js
+@@ -43,6 +43,7 @@ const dirs = [
+ 	'extensions/sagemaker-idle-extension',
+ 	'extensions/sagemaker-terminal-crash-mitigation',
+ 	'extensions/sagemaker-open-notebook-extension',
++	'extensions/sagemaker-ui-dark-theme',
+ 	'extensions/search-result',
+ 	'extensions/simple-browser',
+ 	'extensions/tunnel-forwarding',
+Index: sagemaker-code-editor/vscode/package.json
+===================================================================
+--- sagemaker-code-editor.orig/vscode/package.json
++++ sagemaker-code-editor/vscode/package.json
+@@ -27,7 +27,7 @@
+     "watch-client": "node --max-old-space-size=4095 ./node_modules/gulp/bin/gulp.js watch-client",
+     "watch-clientd": "deemon yarn watch-client",
+     "kill-watch-clientd": "deemon --kill yarn watch-client",
+-    "watch-extensions": "node --max-old-space-size=4095 ./node_modules/gulp/bin/gulp.js watch-extensions watch-extension-media",
++    "watch-extensions": "node --max-old-space-size=8191 ./node_modules/gulp/bin/gulp.js watch-extensions watch-extension-media",
+     "watch-extensionsd": "deemon yarn watch-extensions",
+     "kill-watch-extensionsd": "deemon --kill yarn watch-extensions",
+     "precommit": "node build/hygiene.js",
+Index: sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/package.json
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/sagemaker-ui-dark-theme/package.json
+@@ -0,0 +1,46 @@
++{
++  "name": "sagemaker-ui-dark-theme",
++  "displayName": "SageMaker UI Dark Theme",
++  "description": "SageMaker UI Dark Theme",
++  "extensionKind": [
++    "workspace"
++  ],
++  "version": "1.0.0",
++  "publisher": "sagemaker",
++  "license": "MIT",
++  "engines": {
++    "vscode": "^1.70.0"
++  },
++  "main": "./out/extension",
++  "categories": [
++    "Other"
++  ],
++  "activationEvents": [
++    "onStartupFinished"
++  ],
++  "capabilities": {
++    "virtualWorkspaces": true,
++    "untrustedWorkspaces": {
++      "supported": true
++    }
++  },
++  "contributes": {
++    "configuration": {
++      "type": "object",
++      "title": "SageMaker UI Dark Theme",
++      "properties": {}
++    },
++    "commands": [
++    ]
++  },
++  "scripts": {
++    "compile": "gulp compile-extension:sagemaker-ui-dark-theme",
++    "watch": "npm run build-preview && gulp watch-extension:sagemaker-ui-dark-theme",
++    "vscode:prepublish": "npm run build-ext",
++    "build-ext": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:sagemaker-ui-dark-theme ./tsconfig.json"
++  },
++  "dependencies": {
++  },
++  "repository": {
++  }
++}

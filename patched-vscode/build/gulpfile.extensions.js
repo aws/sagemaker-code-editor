@@ -64,6 +64,7 @@ const compilations = [
 	'extensions/sagemaker-idle-extension/tsconfig.json',
 	'extensions/sagemaker-terminal-crash-mitigation/tsconfig.json',
 	'extensions/sagemaker-open-notebook-extension/tsconfig.json',
+	'extensions/sagemaker-ui-dark-theme/tsconfig.json',
 	'extensions/tunnel-forwarding/tsconfig.json',
 	'extensions/typescript-language-features/test-workspace/tsconfig.json',
 	'extensions/typescript-language-features/web/tsconfig.json',
