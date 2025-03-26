@@ -284,10 +284,13 @@ export function typeInTerminal(command: string) {
 
 
 function handleExistsDialog() {
+	const alreadyExists = '.quick-input-widget:contains("already exists")';
+	const inputWidget = '.quick-input-widget';
+
 	return cy.get('body', { timeout: 20000 }).then($body => {
-		if ($body.find('.quick-input-widget:contains("already exists")').length > 0) {
+		if ($body.find(alreadyExists).length > 0) {
 			cy.log("Found 'already exists' dialog");
-			return cy.get('.quick-input-widget')
+			return cy.get(inputWidget)
 				.contains('OK')
 				.should('be.visible')
 				.click();
@@ -295,6 +298,20 @@ function handleExistsDialog() {
 	});
 }
 
+export function openFilename(filename: string){
+	const openFile = '>File: Open File';
+	const inputFileName = '.quick-input-widget .input';
+	const editor = '.monaco-editor';
+	const file = 'test.py';
+	const browserInterrupt = '.monaco-dialog-box:contains("browser interrupted")';
+
+    cy.contains('.tab-label', file)
+        .click({ force: true });
+
+    // Verify the file is active
+    cy.get('.monaco-editor')
+        .should('be.visible');
+}
 
 export function createJupyterNotebook(filename: string) {
 	// Close all files (open files cause errors)
@@ -345,20 +362,175 @@ export function createJupyterNotebook(filename: string) {
 	});
 }
 
+export function testGotoFunction(){
+	const saveChanges = '.monaco-dialog-modal-block';
+	const editor = '.monaco-editor';
+
+	 // Wait for the editor to be fully loaded
+	 cy.get(editor, { timeout: 10000 }).should('be.visible');
+
+	 // Find and click on the 'print' command to set the cursor
+	 cy.get('.view-line')
+		 .contains('print')
+		 .click({ force: true });
+ 
+	 // Use VSCode command to open Go to Definition
+	 execVSCodeQuickInput('>Go to Definition');
+	 cy.wait(2000);
+
+	 // Verify the definition is visible
+	 cy.get(editor)
+		.last()
+		.should('contain', 'def print');
+}
+
+export function typeInFile(filename: string, command: string) {
+	// Wait for file
+    cy.wait(5000);
+
+    // Type in file
+    cy.get('textarea.inputarea', {timeout: 10000})
+        .first()
+        .click({ force: true })
+		.wait(1000)
+        .type(command, { force:true, delay: 300 });
+
+    // Save and run
+    execVSCodeQuickInput('>File: Save As');
+
+	// Handle Save As dialog
+    cy.get('.quick-input-widget', {timeout: 10000})
+        .contains('Save As')
+        .parent()
+        .parent()
+        .within(() => {
+            cy.get('a.monaco-button.monaco-text-button')
+                .contains('OK')
+                .click({ force: true });
+        });
+
+	cy.get('.quick-input-widget', {timeout: 10000})
+        .contains('test.py already exists')
+        .parent()
+        .parent()
+        .within(() => {
+            cy.get('a.monaco-button.monaco-text-button')
+                .contains('OK')
+                .click({ force: true });
+        });
+
+	cy.wait(6000);
+
+}
+
+
+export function createPythonFile(filename: string) {
+	const fileURL = `/home/sagemaker-user/${filename}.py`;
+	const workBench = '.monaco-workbench';
+	const createPythonCommand = '>Python: New Python File';
+	const editor = '.monaco-editor';
+	const saveFile = '>Save As';
+	const enterFileNameInputWidget = '[class="quick-input-widget show-file-icons"]';
+	const okButton = '.monaco-button';
+	const dialogBox = '.monaco-dialog-box';
+
+    // Wait for VS Code to be ready
+    cy.get(workBench).should('be.visible');
+
+    // Execute New Python File command
+    execVSCodeQuickInput(createPythonCommand);
+
+    // Wait for the editor to be ready
+    cy.get(editor).should('be.visible');
+
+    // Execute Save As command
+    execVSCodeQuickInput(saveFile);
+    
+    // Wait for and interact with the save dialog
+    cy.get(enterFileNameInputWidget)
+        .should('be.visible')
+        .within(() => {
+            cy.get('[class="input"]', {timeout:10000})
+                .should('be.visible')
+                .should('be.enabled')
+				.wait(2000)
+                .clear()
+                .should('have.value', '')
+                .type(fileURL, { delay: 200 })
+                .should('have.value', fileURL)
+				.wait(2000)
+                .type('{enter}')
+				.wait(2000);
+        });
+
+	cy.wait(5000);
+
+    // Handle the overwrite confirmation dialog if it appears
+	cy.get(okButton).contains('OK').click({ force: true });
+	cy.get(dialogBox).should('not.exist');
+
+    // Wait for the file to be saved and editor to update
+    cy.get(editor)
+        .should('be.visible')
+        .find('.view-line')
+        .should('exist');
+}
+
+
+export function runAndPrintOnFile(filename: string, pythonFile: string, testString: string) {
+	const terminalCommand = `python3 ${pythonFile}.py > ${filename}.txt`;
+	const openFile = '>Go to File';
+	const inputFileName = '.quick-input-widget .input';
+	const fileURL = `/home/sagemaker-user/${filename}.txt`;
+	const pythonFileURL = `/home/sagemaker-user/${pythonFile}.py`;
+	const editor = '.monaco-editor';
+
+	openFilename(pythonFileURL);
+
+    // Run Python command in terminal
+    typeInTerminal(terminalCommand);
+    cy.wait(5000);
+
+    // Use Go to File command
+    execVSCodeQuickInput(openFile);
+
+	cy.wait(5000);
+    
+    // Type the full path to the file
+    cy.get(inputFileName)
+        .should('be.visible')
+        .type(fileURL)
+		.type('{enter}');
+
+	cy.wait(5000);
+
+    // Verify content in editor
+    cy.get(editor,)
+        .should('be.visible')
+		.should('contain.text', testString)
+        .contains(testString);
+	
+}
 
 export function typeAndExecuteInNotebook(command: string, filename: string) {
+	const editor = '.notebook-editor';
+	const selectKernelButton = '.kernel-label:contains("Select Kernel")';
+	const kernelSelector = '.kernel-label';
+	const monacoEditor = '.monaco-editor';
+	const saveChanges = '.monaco-dialog-modal-block';
+
     cy.wait(5000);
 
     // Wait for notebook to load and be ready
-    cy.get('.notebook-editor', { timeout: 15000 })
+    cy.get(editor, { timeout: 15000 })
         .should('be.visible');
 
 	cy.wait(5000);
 
 	cy.get('body').then($body => {
-        if ($body.find('.kernel-label:contains("Select Kernel")').length > 0) {
+        if ($body.find(selectKernelButton).length > 0) {
             // Click kernel selector
-            cy.get('.kernel-label')
+            cy.get(kernelSelector)
                 .contains('Select Kernel')
                 .click();
 			
@@ -377,7 +549,7 @@ export function typeAndExecuteInNotebook(command: string, filename: string) {
     });
 
     // Handle the editor with the overlapping elements
-    cy.get('.monaco-editor')
+    cy.get(monacoEditor)
         .first()
         .should('be.visible')
         .then($editor => {
@@ -405,23 +577,21 @@ export function typeAndExecuteInNotebook(command: string, filename: string) {
 				.type('{shift+enter}');
         });
 
-		// cy.get('body').type('{ctrl+enter}');
-    		cy.wait(5000);
+	cy.wait(5000);
 
-		cy.get('.notebook-editor')
-        	.should('contain', 'hello');
+	cy.get(editor)
+		.should('contain', 'hello');
 
-		// Optional: wait a bit more to ensure execution is fully complete
-		cy.wait(2000);
+	cy.wait(2000);
 
-    // Close all files
+    // Close all files from the editor (all open files on the editor)
     execVSCodeQuickInput('>View: Close All Editors');
     cy.wait(5000);
 
 	// Handle "Do you want to save the changes" dialog if it appears
 	cy.get('body').then($body => {
-        if ($body.find('.monaco-dialog-modal-block').length > 0) {
-            cy.get('.monaco-dialog-modal-block')
+        if ($body.find(saveChanges).length > 0) {
+            cy.get(saveChanges)
                 .contains('Don\'t Save')
                 .click();
             cy.wait(2000);
