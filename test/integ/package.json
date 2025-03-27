@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "cypress": "^13.13.1",
+    "cypress": "^14.2.1",
     "cypress-wait-until": "^3.0.2",
     "typescript": "^5.5.3"
   }

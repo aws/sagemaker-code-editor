@@ -15,10 +15,10 @@ export default defineConfig({
 				// 'cypress/specs/added-features/extensions.cy.ts',
                 // 'cypress/specs/core/hosted/about.cy.ts'
                 // 'cypress/specs/core/hosted/cookie.cy.ts'
-                // 'cypress/specs/core/hosted/logout.cy.ts'
+                'cypress/specs/core/hosted/logout.cy.ts'
                 // 'cypress/specs/core/hosted/jupyter.cy.ts',
-                'cypress/specs/core/hosted/python.cy.ts'
-                // 'cypress/specs/core/hosted/folder.cy.ts'
+                // 'cypress/specs/core/hosted/python.cy.ts'
+                // 'cypress/specs/core/hosted/folder.cy.ts',
                 // 'cypress/specs/added-features/extensions-ide.cy.ts'
 			],
 		excludeSpecPattern: 'utils.ts',

@@ -164,6 +164,7 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 
 	const dialogMessageBox = '[class="dialog-message-text"]';
 	const yesTrustAuthors = '[class="monaco-button monaco-text-button"][title="Yes, I trust the authors"]';
+	const tickCheckBox = '.monaco-checkbox';
 
 	// Function to check if dialog box exists and is visible
 	const isDialogVisible = () => {
@@ -192,10 +193,14 @@ export function openFolder(openedDirectories: Set<string>, path: string = ' ', u
 							.should('exist')
 							.and('be.visible')
 							.and('have.text', 'Do you trust the authors of the files in this folder?');
-						cy.get(yesTrustAuthors)
-							.should('exist')
-							.and('be.visible')
-							.click();
+
+						cy.get(tickCheckBox).then($checkbox => {
+								if ($checkbox.is(':visible')) {
+								  cy.wrap($checkbox).click()
+								}
+							  });
+							
+						cy.get('.monaco-button').contains('Yes, I trust the authors').click();
 						cy.wait(1_000);
 					});
 			} else {
