@@ -23,6 +23,21 @@ const ENABLE_AUTO_UPDATE_COMMAND = 'workbench.extensions.action.enableAutoUpdate
 // Global redirect URL for SMUS environment
 let smusRedirectUrl: string | null = null;
 
+function fetchMetadata(): SagemakerResourceMetadata | null {
+    try {
+        const data = fs.readFileSync(SAGEMAKER_METADATA_PATH, 'utf-8');
+        return JSON.parse(data) as SagemakerResourceMetadata;
+    } catch (error) {
+        // fail silently not to block users
+        console.error('Error reading metadata file:', error);
+        return null;
+    }
+}
+
+function initializeSmusRedirectUrl() {
+    smusRedirectUrl = getSmusVscodePortalUrl(fetchMetadata());
+}
+
 function showWarningDialog() {
     vscode.commands.executeCommand(PARSE_SAGEMAKER_COOKIE_COMMAND).then(response => {
 
@@ -107,22 +122,12 @@ function renewSession(sagemakerCookie: SagemakerCookie) {
 }
 
 function updateStatusItemWithMetadata(context: vscode.ExtensionContext) {
-    try {
-        const data = fs.readFileSync(SAGEMAKER_METADATA_PATH, 'utf-8');
-        const jsonData = JSON.parse(data) as SagemakerResourceMetadata;
-
-        if (jsonData?.SpaceName) {
-            let spaceNameStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-            spaceNameStatusBarItem.text = `Space: ${jsonData.SpaceName}`;
-            spaceNameStatusBarItem.show();
-            context.subscriptions.push(spaceNameStatusBarItem);
-        }
-
-        // Initialize SMUS redirect URL
-        smusRedirectUrl = getSmusVscodePortalUrl(jsonData);
-    } catch (error) {
-        // fail silently not to block users
-        console.error('Error reading metadata file:', error);
+    const metadata = fetchMetadata();
+    if (metadata?.SpaceName) {
+        let spaceNameStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+        spaceNameStatusBarItem.text = `Space: ${metadata.SpaceName}`;
+        spaceNameStatusBarItem.show();
+        context.subscriptions.push(spaceNameStatusBarItem);
     }
 }
 
@@ -162,8 +167,8 @@ export function activate(context: vscode.ExtensionContext) {
     // TODO: log activation of extension
     console.log('Activating Sagemaker Extension...');
 
-    // Initialize metadata first (which will set smusRedirectUrl if in SMUS environment)
-    updateStatusItemWithMetadata(context);
+    // First set smusRedirectUrl if we are in SMUS environment
+    initializeSmusRedirectUrl();
 
     // execute the get cookie command and save the data to cookies
     vscode.commands.executeCommand(PARSE_SAGEMAKER_COOKIE_COMMAND).then(r => {
@@ -171,6 +176,7 @@ export function activate(context: vscode.ExtensionContext) {
         const sagemakerCookie: SagemakerCookie = r as SagemakerCookie
 
         initialize(sagemakerCookie);
+        updateStatusItemWithMetadata(context);
     });
 
     // render warning message regarding auto upgrade disabled
