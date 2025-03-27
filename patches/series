@@ -12,3 +12,4 @@ terminal-crash-mitigation.patch
 sagemaker-open-notebook-extension.patch
 security.diff
 sagemaker-ui-dark-theme.patch
+sagemaker-ui-post-startup.patch
