@@ -67,7 +67,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/extensions/sagemaker-extension/src/extension.ts
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension.ts
-@@ -11,13 +11,17 @@ import {
+@@ -11,7 +11,8 @@ import {
      WARNING_BUTTON_SAVE_AND_RENEW_SESSION,
      SagemakerCookie,
      SagemakerResourceMetadata,
@@ -77,8 +77,9 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
  } from "./constant";
  import * as console from "console";
  
- 
+@@ -19,6 +20,9 @@ import * as console from "console";
  const PARSE_SAGEMAKER_COOKIE_COMMAND = 'sagemaker.parseCookies';
+ const ENABLE_AUTO_UPDATE_COMMAND = 'workbench.extensions.action.enableAutoUpdate';
  
 +// Global redirect URL for SMUS environment
 +let smusRedirectUrl: string | null = null;
@@ -86,7 +87,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
  function showWarningDialog() {
      vscode.commands.executeCommand(PARSE_SAGEMAKER_COOKIE_COMMAND).then(response => {
  
-@@ -58,11 +62,12 @@ function showWarningDialog() {
+@@ -59,11 +63,12 @@ function showWarningDialog() {
  }
  
  function signInError(sagemakerCookie: SagemakerCookie) {
@@ -100,7 +101,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
              }
          });
  }
-@@ -93,32 +98,31 @@ function saveWorkspace() {
+@@ -94,32 +99,31 @@ function saveWorkspace() {
      });
  }
  function renewSession(sagemakerCookie: SagemakerCookie) {
@@ -150,8 +151,8 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
 +    }
  }
  
- export function activate(context: vscode.ExtensionContext) {
-@@ -126,12 +130,22 @@ export function activate(context: vscode
+ // Render warning message regarding auto upgrade disabled
+@@ -158,15 +162,25 @@ export function activate(context: vscode
      // TODO: log activation of extension
      console.log('Activating Sagemaker Extension...');
  
@@ -166,6 +167,9 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
          initialize(sagemakerCookie);
 -        updateStatusItemWithMetadata(context);
      });
+ 
+     // render warning message regarding auto upgrade disabled
+     renderExtensionAutoUpgradeDisabledNotification();
  }
 +
 +/**
@@ -175,4 +179,3 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
 +function getRedirectUrl(sagemakerCookie: SagemakerCookie): string {
 +    return smusRedirectUrl || sagemakerCookie.redirectURL;
 +}
-\ No newline at end of file
