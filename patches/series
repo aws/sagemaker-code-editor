@@ -13,3 +13,4 @@ sagemaker-open-notebook-extension.patch
 security.diff
 sagemaker-extension-smus-support.patch
 sagemaker-ui-dark-theme.patch
+sagemaker-ui-post-startup.patch
