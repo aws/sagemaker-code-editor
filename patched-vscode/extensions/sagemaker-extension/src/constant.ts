@@ -84,7 +84,7 @@ export function getExpiryTime(cookie: SagemakerCookie): number {
  * Constructs the SMUS portal URL using domain, region, and project information
  * Returns null if not in SMUS environment or if required fields are missing
  */
-export const getSmusVscodePortalUrl = (metadata: SagemakerResourceMetadata): string | null => {
+export const getSmusVscodePortalUrl = (metadata: SagemakerResourceMetadata | null): string | null => {
 	if (process.env[SERVICE_NAME_ENV_VAR] !== SMUS_SERVICE_NAME) {
 		return null;
 	}
