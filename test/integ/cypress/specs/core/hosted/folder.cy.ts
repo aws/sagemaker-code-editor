@@ -1,5 +1,5 @@
-import { openedDirectories } from "../../support/e2e";
-import { openFolder, typeInTerminal, execVSCodeQuickInput } from "../../support/commands";
+import { openedDirectories } from "../../../support/e2e";
+import { openFolder, typeInTerminal, execVSCodeQuickInput } from "../../../support/commands";
 
 describe('Folder Operations', () => {
   
