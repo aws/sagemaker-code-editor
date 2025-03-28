@@ -1,5 +1,6 @@
 import 'cypress-wait-until';
 import { BACKGROUND, DIALOG_BOX, GENERIC_BUTTON } from './constants';
+import 'cypress-plugin-tab'
 
 export const DEBUG: boolean = Cypress.env('DEBUG');
 export const RUN_LOCAL: boolean = Cypress.env('RUN_LOCAL');
@@ -510,7 +511,7 @@ export function runAndPrintOnFile(filename: string, pythonFile: string, testStri
 	cy.wait(5000);
 
     // Verify content in editor
-    cy.get(editor,)
+    cy.get(editor)
         .should('be.visible')
 		.should('contain.text', testString)
         .contains(testString);
@@ -603,3 +604,53 @@ export function typeAndExecuteInNotebook(command: string, filename: string) {
         }
     });
 }
+
+export function verifyNumberOfCodeLines( pythonFile: string, codeInput: string){
+	const openFile = '>Go to File';
+	const inputFileName = '.quick-input-widget .input';
+	const pythonFileURL = `/home/sagemaker-user/${pythonFile}.py`;
+	const editor = '.monaco-editor';
+
+	openFilename(pythonFileURL);
+
+
+	cy.wait(5000);
+
+    // Get initial number of lines
+    cy.get('.monaco-editor .view-lines')
+		.contains(codeInput)
+		.should('be.visible')
+        .then($editor => {
+            const initialContent = $editor.text();
+            // cy.log('Initial content:', initialContent);
+
+			cy.get('.monaco-editor .inputarea.monaco-mouse-cursor-text')
+                .type(':', { force: true })
+                .wait(2000)
+				.tab();
+
+            // Press tab after 'def' to trigger recommendations
+            // cy.get('body').type('\t', { force: true });
+            
+            cy.wait(20000); // Wait for recommendations to appear
+
+            // Verify that there's more content than just 'def'
+            cy.get(editor, {timeout: 10000})
+			.should('not.have.text', `${codeInput}:`) 
+			.then($newEditor => {
+                const newContent = $newEditor.text();
+                // cy.log('New content:', newContent);
+                
+                // Verify content is more than just 'def'
+				expect(newContent.length, 'Content length has increased').to.be.greaterThan(initialContent.length);
+				expect(newContent, 'Content has changed').to.not.equal(initialContent);
+				expect(newContent, 'Content is not just input with colon').to.not.equal(`${codeInput}:`);
+
+                // expect(newContent.length).to.be.greaterThan(initialContent.length);
+                // expect(newContent).to.not.equal('def');
+            });
+
+			cy.wait(10000);
+    });
+}
+
