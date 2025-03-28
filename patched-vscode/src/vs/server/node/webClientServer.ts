@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createReadStream } from 'fs';
+import { createReadStream, existsSync, writeFileSync } from 'fs';
 import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
+import { spawn } from 'child_process';
+import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
 import * as url from 'url';
@@ -38,6 +40,10 @@ const textMimeType: { [ext: string]: string | undefined } = {
 	'.css': 'text/css',
 	'.svg': 'image/svg+xml',
 };
+
+const enum ServiceName {
+	SAGEMAKER_UNIFIED_STUDIO = 'SageMakerUnifiedStudio',
+}
 
 /**
  * Return an error to the client.
@@ -102,6 +108,7 @@ export class WebClientServer {
 	private readonly _callbackRoute: string;
 	private readonly _webExtensionRoute: string;
 	private readonly _idleRoute: string;
+	private readonly _postStartupScriptRoute: string;
 
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
@@ -118,6 +125,7 @@ export class WebClientServer {
 		this._callbackRoute = `${serverRootPath}/callback`;
 		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
 		this._idleRoute = '/api/idle';
+		this._postStartupScriptRoute = '/api/poststartup';
 	}
 
 	/**
@@ -145,6 +153,9 @@ export class WebClientServer {
 			if (pathname.startsWith(this._webExtensionRoute) && pathname.charCodeAt(this._webExtensionRoute.length) === CharCode.Slash) {
 				// extension resource support
 				return this._handleWebExtensionResource(req, res, parsedUrl);
+			}
+			if (pathname === this._postStartupScriptRoute) {
+				return this._handlePostStartupScriptInvocation(req, res);
 			}
 
 			return serveError(req, res, 404, 'Not found.');
@@ -459,12 +470,20 @@ export class WebClientServer {
 	}
 
 	/**
- 	 * Handles API requests to retrieve the last activity timestamp.
+	 * Handles API requests to retrieve the last activity timestamp.
    */
 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 		try {
 			const tmpDirectory = '/tmp/'
 			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
+
+			// If idle shutdown file does not exist, this indicates the app UI may never been opened
+			// Create the initial metadata file
+			if (!existsSync(idleFilePath)) {
+				const timestamp = new Date().toISOString();
+				writeFileSync(idleFilePath, timestamp);
+			}
+
 			const data = await readFile(idleFilePath, 'utf8');
 
 			res.statusCode = 200;
@@ -472,6 +491,41 @@ export class WebClientServer {
 			res.end(JSON.stringify({ lastActiveTimestamp: data }));
 		} catch (error) {
 			serveError(req, res, 500, error.message)
+		}
+	}
+
+	/**
+	 * Handles API requests to run the post-startup script in SMD.
+	 */
+	private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
+		const logPath = '/var/log/apps/post_startup_default.log';
+		const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+
+		// Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
+		if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {
+			return serveError(req, res, 403, 'Forbidden');
+		} else {
+			//If postStartupScriptFile doesn't exist, it will throw FileNotFoundError (404)
+			//If exists, it will start the execution and add the execution logs in logFile.
+			try {
+				if (fs.existsSync(postStartupScriptPath)) {
+					// Adding 0o755 to make script file executable
+					fs.chmodSync(postStartupScriptPath, 0o755);
+
+					const subprocess = spawn('bash', [`${postStartupScriptPath}`], { cwd: '/' });
+					subprocess.stdout.pipe(logStream);
+					subprocess.stderr.pipe(logStream);
+
+					res.statusCode = 200;
+					res.setHeader('Content-Type', 'application/json');
+					res.end(JSON.stringify({ 'success': 'true' }));
+				} else {
+					serveError(req, res, 500, 'Poststartup script file not found at ' + postStartupScriptPath);
+				}
+			} catch (error) {
+				serveError(req, res, 500, error.message);
+			}
 		}
 	}
 }
