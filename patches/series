@@ -14,3 +14,4 @@ security.diff
 sagemaker-ui-dark-theme.patch
 sagemaker-ui-post-startup.patch
 sagemaker-extension-smus-support.patch
+post-startup-notifications.patch
