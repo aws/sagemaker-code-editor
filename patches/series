@@ -1,3 +1,4 @@
+sagemaker-data-explorer-extension.patch
 sagemaker-extension.diff
 disable-online-services.diff
 disable-telemetry.diff

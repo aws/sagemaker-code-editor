@@ -1,0 +1,64 @@
+{
+  "name": "sagemaker-data-explorer-extension",
+  "displayName": "Sagemaker Data Explorer Extension",
+  "description": "Browse, manage, and visualize data assets from Amazon S3, Redshift, and more in SageMaker Lakehouse for AI workflows.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "data-explorer-sidebar-view",
+          "title": "Data Explorer",
+          "icon": "assets/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "data-explorer-sidebar-view": [
+        {
+          "type": "webview",
+          "id": "data-explorer-sidebar",
+          "name": "Data Explorer"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "npm run compile-extension && npm run compile-web-ui",
+    "compile-extension": "gulp compile-extension:sagemaker-data-explorer-extension",
+    "compile-web": "npm run compile-web-extension && npm run compile-web-ui",
+    "compile-web-extension": "npx webpack-cli --config extension-browser.webpack.config.js --mode production",
+    "compile-web-ui": "npm run build --prefix webview-ui",
+    "watch": "npm run watch-extension & npm run watch-web-ui",
+    "watch-extension": "npm run build-preview && gulp watch-extension:sagemaker-data-explorer-extension",
+    "watch-web": "npm run watch-web-extension & npm run watch-web-ui",
+    "watch-web-extension": "npx webpack-cli --config extension-browser.webpack.config.js --mode development --watch",
+    "watch-web-ui": "npm run watch --prefix webview-ui",
+    "vscode:prepublish": "echo Running build-ext && npm run build-ext && echo Running compile-web-ui && npm run compile-web-ui",
+    "build-ext": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:sagemaker-data-explorer-extension",
+    "build-preview": "node ./esbuild-preview.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.22.0",
+    "@typescript-eslint/parser": "^8.22.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.19.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.7.3",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
+  }
+}
