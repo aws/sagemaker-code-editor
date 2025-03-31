@@ -45,6 +45,11 @@ const extensions = [
 		label: 'github-authentication',
 		workspaceFolder: path.join(os.tmpdir(), `msft-auth-${Math.floor(Math.random() * 100000)}`),
 		mocha: { timeout: 60_000 }
+	},
+	{
+		label: 'sagemaker-ui-dark-theme',
+		workspaceFolder: `extensions/sagemaker-ui-dark-theme/test-workspace`,
+		mocha: { timeout: 60_000 }
 	}
 ];
 
