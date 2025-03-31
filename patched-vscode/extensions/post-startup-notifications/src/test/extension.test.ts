@@ -13,11 +13,11 @@ interface MockFSWatcher extends chokidar.FSWatcher {
 
 // Mocks setup
 jest.mock('vscode', () => ({
-    window: {
-        showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        createOutputChannel: jest.fn()
-    }
+  window: {
+      showErrorMessage: jest.fn(),
+      showInformationMessage: jest.fn(),
+      createOutputChannel: jest.fn()
+  }
 }));
 
 jest.mock('fs');
@@ -42,8 +42,8 @@ describe('SageMaker Unified Studio Extension Tests', () => {
         } as any;
 
         mockOutputChannel = {
-            appendLine: jest.fn(),
-            dispose: jest.fn()
+          appendLine: jest.fn(),
+          dispose: jest.fn()
         } as any;
 
         (chokidar.watch as jest.Mock).mockReturnValue(mockWatcher);
@@ -128,7 +128,7 @@ describe('SageMaker Unified Studio Extension Tests', () => {
             const addCallback = getWatcherCallback('add');
             addCallback('test-path');
             expect(vscode.window.showErrorMessage).toHaveBeenCalledTimes(1);
-
+            
             addCallback('test-path');
             expect(vscode.window.showErrorMessage).toHaveBeenCalledTimes(1);
         });
@@ -143,7 +143,7 @@ describe('SageMaker Unified Studio Extension Tests', () => {
     describe('Error Handling Tests', () => {
         test('should handle invalid JSON', () => {
             (fs.readFileSync as jest.Mock).mockReturnValue('invalid json');
-
+            
             activate(mockContext);
             getWatcherCallback('add')('test-path');
 
@@ -180,7 +180,7 @@ describe('SageMaker Unified Studio Extension Tests', () => {
 
         test('should handle missing status or message', () => {
             simulateFileContent({});
-
+            
             activate(mockContext);
             getWatcherCallback('add')('test-path');
 
