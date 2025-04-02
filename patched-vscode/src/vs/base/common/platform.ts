@@ -2,8 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as nls from 'vs/nls';
-
 export const LANGUAGE_DEFAULT = 'en';
 
 let _isWindows = false;
@@ -112,17 +110,21 @@ else if (typeof navigator === 'object' && !isElectronRenderer) {
 	_isMobile = _userAgent?.indexOf('Mobi') >= 0;
 	_isWeb = true;
 
-	const configuredLocale = nls.getConfiguredDefaultLocale(
-		// This call _must_ be done in the file that calls `nls.getConfiguredDefaultLocale`
-		// to ensure that the NLS AMD Loader plugin has been loaded and configured.
-		// This is because the loader plugin decides what the default locale is based on
-		// how it's able to resolve the strings.
-		nls.localize({ key: 'ensureLoaderPluginIsLoaded', comment: ['{Locked}'] }, '_')
-	);
-
-	_locale = configuredLocale || LANGUAGE_DEFAULT;
+	_locale = LANGUAGE_DEFAULT;
 	_language = _locale;
 	_platformLocale = navigator.language;
+	const el = typeof document !== 'undefined' && document.getElementById('vscode-remote-nls-configuration');
+	const rawNlsConfig = el && el.getAttribute('data-settings');
+	if (rawNlsConfig) {
+		try {
+			const nlsConfig: NLSConfig = JSON.parse(rawNlsConfig);
+			const resolved = nlsConfig.availableLanguages['*'];
+			_locale = nlsConfig.locale;
+			_platformLocale = nlsConfig.osLocale;
+			_language = resolved ? resolved : LANGUAGE_DEFAULT;
+			_translationsConfigFile = nlsConfig._translationsConfigFile;
+		} catch (error) { /* Oh well. */ }
+	}
 }
 
 // Unknown environment

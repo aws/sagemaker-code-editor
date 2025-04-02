@@ -14,6 +14,8 @@ import { URI } from 'vs/base/common/uri';
 
 export const serverOptions: OptionDescriptions<Required<ServerParsedArgs>> = {
 
+	'locale': { type: 'string' },
+
 	/* ----- server setup ----- */
 
 	'host': { type: 'string', cat: 'o', args: 'ip-address', description: nls.localize('host', "The host name or IP address the server should listen to. If not set, defaults to 'localhost'.") },
@@ -96,6 +98,8 @@ export const serverOptions: OptionDescriptions<Required<ServerParsedArgs>> = {
 };
 
 export interface ServerParsedArgs {
+
+	'locale'?: string;
 
 	/* ----- server setup ----- */
 
