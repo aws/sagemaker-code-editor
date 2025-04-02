@@ -4537,3 +4537,51 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/yarn.l
 +  version "0.1.0"
 +  resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
 +  integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
+Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/extension-browser.webpack.config.js
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/post-startup-notifications/extension-browser.webpack.config.js
+@@ -0,0 +1,17 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright Amazon.com Inc. or its affiliates. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++//@ts-check
++
++'use strict';
++
++const withBrowserDefaults = require('../shared.webpack.config').browser;
++
++module.exports = withBrowserDefaults({
++    context: __dirname,
++    entry: {
++        extension: './src/extension.ts'
++    },
++});
+Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/extension.webpack.config.js
+===================================================================
+--- /dev/null
++++ sagemaker-code-editor/vscode/extensions/post-startup-notifications/extension.webpack.config.js
+@@ -0,0 +1,20 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright Amazon.com Inc. or its affiliates. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++//@ts-check
++
++'use strict';
++
++const withDefaults = require('../shared.webpack.config');
++
++module.exports = withDefaults({
++    context: __dirname,
++    resolve: {
++        mainFields: ['module', 'main']
++    },
++    entry: {
++        extension: './src/extension.ts',
++    }
++});
+\ No newline at end of file
