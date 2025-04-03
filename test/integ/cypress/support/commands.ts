@@ -654,3 +654,112 @@ export function verifyNumberOfCodeLines( pythonFile: string, codeInput: string){
     });
 }
 
+
+
+// Extension
+
+export function loadWorkspace(){
+	cy.get('.monaco-workbench', { timeout: 30000 }).should('be.visible');
+}
+
+export function openExtensionPanel(){
+	cy.get('body').type('{shift}{cmd}x');
+    cy.wait(3000);
+}
+
+export function manageGitHubExtension(extensionName: string) {
+    // Wait for workspace to load
+    loadWorkspace();
+    // Open Extensions panel
+    openExtensionPanel();
+
+    //   Search for GitHub Pull Requests extension
+      cy.get('.extensions-search-container')
+        .find('textarea[aria-label="Search Extensions in Marketplace"]')
+        .type('GitHub Pull Requests{enter}', { force: true });
+      
+      cy.wait(5000);
+  
+    //   Find and click on the GitHub Pull Requests extension
+      cy.get('.monaco-list-rows')
+        .contains('.extension-list-item', 'GitHub Pull Requests')
+        .should('be.visible')
+        .click();
+  
+      // Check for install button in actions-status-container
+      cy.get('.extension-editor .header .actions-status-container')
+        .then($container => {
+          const isInstalled = $container.find('Uninstall').length > 0;
+
+          if (isInstalled) {
+              cy.log('Extension is installed - proceeding with uninstall');
+              // Find and click Uninstall
+              cy.get('.actions-status-container')
+                .find('.action-item.action-dropdown-item:not(.disabled)')
+                .contains('Uninstall')
+                .click({ force: true });
+          } 
+          else {
+              cy.log('Extension needs to be installed');
+              // Click Install
+              cy.get('.actions-status-container')
+                  .find('.action-item.action-dropdown-item:not(.disabled)')
+                  .find('.action-label.extension-action.label.prominent.install')
+                  .first() // Select only the first matching element
+                  .click({ force: true });
+            
+              // Wait for Installing state
+              cy.get('.actions-status-container')
+              .find('.action-label.codicon.disabled.extension-action.label.install.installing')
+              .should('be.visible');
+              
+              cy.wait(15000);
+
+              // Wait for Installing to complete (button should disappear)
+              cy.get('.actions-status-container')
+              .find('.action-label.codicon.disabled.extension-action.label.install.installing')
+              .should('not.exist');
+
+              cy.wait(2000);
+          }
+  
+          // Handle reload window
+          cy.contains('Reload Window', {timeout: 10000})
+            .should('be.visible')
+            .click({ force: true });
+  
+          // Wait for workspace to reload
+          cy.get('.monaco-workbench', { timeout: 30000 }).should('be.visible');
+          
+          if (!isInstalled) {
+            // If we just installed, we need to uninstall
+            cy.get('body').type('{shift}{cmd}x');
+            cy.wait(3000);
+  
+            // Search again
+            cy.get('.extensions-search-container')
+              .find('textarea[aria-label="Search Extensions in Marketplace"]')
+              .type('GitHub Pull Requests{enter}', { force: true });
+            
+            // Click on extension again
+            cy.get('.monaco-list-rows')
+              .contains('.extension-list-item', 'GitHub Pull Requests')
+              .should('be.visible')
+              .click();
+  
+            // Find and click Uninstall
+            cy.get('.actions-status-container')
+              .find('.action-item.action-dropdown-item:not(.disabled)')
+              .contains('Uninstall')
+              .click({ force: true });
+  
+            // Handle final reload
+            cy.contains('Reload Window')
+              .should('be.visible')
+              .click({ force: true });
+          }
+        });
+  
+      // Wait for final reload to complete
+      cy.get('.monaco-workbench', { timeout: 30000 }).should('be.visible');
+}
