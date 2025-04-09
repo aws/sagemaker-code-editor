@@ -1,0 +1,57 @@
+{
+    "name": "post-startup-notifications",
+    "displayName": "post-startup-notifications",
+    "description": "Extension for surfacing post startup script status notifications to users",
+    "version": "0.0.1",
+    "publisher": "sagemaker",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.98.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "*"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": []
+    },
+    "scripts": {
+        "test": "jest",
+        "compile": "gulp compile-extension:post-startup-notifications",
+        "watch": "npm run build-preview && gulp watch-extension:post-startup-notifications",
+        "vscode:prepublish": "npm run build-ext",
+        "build-ext": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:post-startup-notifications ./tsconfig.json"
+    },
+    "jest": {
+        "preset": "ts-jest",
+        "testEnvironment": "node",
+        "moduleFileExtensions": [
+            "ts",
+            "js"
+        ]
+    },
+    "devDependencies": {
+        "@types/jest": "^29.5.14",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "20.x",
+        "@types/vscode": "^1.98.0",
+        "@typescript-eslint/eslint-plugin": "^8.25.0",
+        "@typescript-eslint/parser": "^8.25.0",
+        "@vscode/test-cli": "^0.0.10",
+        "@vscode/test-electron": "^2.4.1",
+        "eslint": "^9.21.0",
+        "jest": "^29.7.0",
+        "mocha": "^11.1.0",
+        "ts-jest": "^29.3.0",
+        "ts-loader": "^9.5.2",
+        "typescript": "^5.7.3",
+        "webpack": "^5.98.0",
+        "webpack-cli": "^6.0.1"
+    },
+    "dependencies": {
+        "chokidar": "^4.0.3"
+    }
+}
