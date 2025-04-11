@@ -148,14 +148,11 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/con
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/constants.ts
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,21 @@
 +// constants
-+//todo: uncomment correct code
-+// export const PERSISTENT_VOLUME_EXTENSIONS_DIR = "/home/sagemaker-user/sagemaker-code-editor-server-data/extensions";
-+export const PERSISTENT_VOLUME_EXTENSIONS_DIR = "/Users/pangestu/.vscode-server-oss-dev/extensions";
-+// export const IMAGE_EXTENSIONS_DIR = "/opt/amazon/sagemaker-code-editor-server-data/extensions";
-+export const IMAGE_EXTENSIONS_DIR = "/tmp/extensions";
-+export const LOG_PREFIX = "[sagemaker-extensions-sync]"
++export const PERSISTENT_VOLUME_EXTENSIONS_DIR = "/home/sagemaker-user/sagemaker-code-editor-server-data/extensions";
++export const IMAGE_EXTENSIONS_DIR = "/opt/amazon/sagemaker-code-editor-server-data/extensions";
++export const LOG_PREFIX = "[sagemaker-extensions-sync]";
 +
 +export class ExtensionInfo {
 +    constructor(
@@ -307,7 +304,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/uti
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/utils.ts
-@@ -0,0 +1,155 @@
+@@ -0,0 +1,152 @@
 +import * as fs from "fs/promises";
 +import * as path from "path";
 +import * as vscode from 'vscode';
@@ -356,11 +353,8 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/uti
 +}
 +
 +export async function getInstalledExtensions(): Promise<string[]> {
-+	const command = "./scripts/code-server.sh";
-+	// todo: uncomment correct code
-+	//const command = "sagemaker-code-editor";
-+	const args = ["--list-extensions", "--show-versions", ];
-+		// "--extensions-dir", PERSISTENT_VOLUME_EXTENSIONS_DIR];
++	const command = "sagemaker-code-editor";
++	const args = ["--list-extensions", "--show-versions", "--extensions-dir", PERSISTENT_VOLUME_EXTENSIONS_DIR];
 +
 +	const execFileAsync = promisify(execFile);
 +	try {
