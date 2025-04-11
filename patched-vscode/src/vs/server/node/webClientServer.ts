@@ -470,7 +470,7 @@ export class WebClientServer {
 	}
 
 	/**
-	 * Handles API requests to retrieve the last activity timestamp.
+ 	 * Handles API requests to retrieve the last activity timestamp.
    */
 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 		try {
@@ -494,40 +494,40 @@ export class WebClientServer {
 		}
 	}
 
-	/**
-	 * Handles API requests to run the post-startup script in SMD.
-	 */
-	private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-		const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
-		const logPath = '/var/log/apps/post_startup_default.log';
-		const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+    /**
+     * Handles API requests to run the post-startup script in SMD.
+     */
+    private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+        const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
+        const logPath = '/var/log/apps/post_startup_default.log';
+        const logStream = fs.createWriteStream(logPath, { flags: 'a' });
 
-		// Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
-		if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {
-			return serveError(req, res, 403, 'Forbidden');
-		} else {
-			//If postStartupScriptFile doesn't exist, it will throw FileNotFoundError (404)
-			//If exists, it will start the execution and add the execution logs in logFile.
-			try {
-				if (fs.existsSync(postStartupScriptPath)) {
-					// Adding 0o755 to make script file executable
-					fs.chmodSync(postStartupScriptPath, 0o755);
+        // Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
+        if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {
+            return serveError(req, res, 403, 'Forbidden');
+        } else {
+            //If postStartupScriptFile doesn't exist, it will throw FileNotFoundError (404)
+            //If exists, it will start the execution and add the execution logs in logFile.
+            try {
+                if (fs.existsSync(postStartupScriptPath)) {
+                    // Adding 0o755 to make script file executable
+                    fs.chmodSync(postStartupScriptPath, 0o755);
 
-					const subprocess = spawn('bash', [`${postStartupScriptPath}`], { cwd: '/' });
-					subprocess.stdout.pipe(logStream);
-					subprocess.stderr.pipe(logStream);
+                    const subprocess = spawn('bash', [`${postStartupScriptPath}`], { cwd: '/' });
+                    subprocess.stdout.pipe(logStream);
+                    subprocess.stderr.pipe(logStream);
 
-					res.statusCode = 200;
-					res.setHeader('Content-Type', 'application/json');
-					res.end(JSON.stringify({ 'success': 'true' }));
-				} else {
-					serveError(req, res, 500, 'Poststartup script file not found at ' + postStartupScriptPath);
-				}
-			} catch (error) {
-				serveError(req, res, 500, error.message);
-			}
-		}
-	}
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ 'success': 'true' }));
+                } else {
+                    serveError(req, res, 500, 'Poststartup script file not found at ' + postStartupScriptPath);
+                }
+            } catch (error) {
+                serveError(req, res, 500, error.message);
+            }
+        }
+    }
 }
 
 /**

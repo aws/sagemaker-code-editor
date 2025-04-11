@@ -89,12 +89,3 @@ function downloadFile(url: string): Promise<string> {
             response.on('data', (chunk) => {
                 data += chunk;
             });
-            response.on('end', () => {
-                resolve(data);
-            });
-        }).on('error', (error) => {
-            reject(error);
-        });
-    });
-}
-export function deactivate() {}
