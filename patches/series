@@ -1,3 +1,4 @@
+tar-fs-upgrade.patch
 sagemaker-extension.diff
 disable-online-services.diff
 disable-telemetry.diff
