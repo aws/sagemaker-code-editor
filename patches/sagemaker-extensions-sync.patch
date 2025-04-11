@@ -177,7 +177,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/ext
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/extension.ts
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,100 @@
 +import * as process from "process";
 +import * as vscode from 'vscode';
 +
@@ -224,7 +224,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/ext
 +			pvExtensionsById[extension.identifier] = extension;
 +		}
 +	});
-+	console.log(`${LOG_PREFIX} Found extensions in persistent volume: `, JSON.stringify(pvExtensionsById, null, 2));
++	console.log(`${LOG_PREFIX} Found installed extensions in persistent volume: `, pvExtensionsById);
 +
 +	// check each pre-packaged extension, record if it is not in installed extensions or version mismatch
 +	// store unsynced extensions as {identifier pre-packaged ext: currently installed version}
@@ -235,7 +235,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/ext
 +			unsyncedExtensions[id] = pvExtensionsByName[extension.name]?.version ?? null;
 +		}
 +	});
-+	console.log(`${LOG_PREFIX} Unsynced extensions: `, JSON.stringify(unsyncedExtensions, null, 2));
++	console.log(`${LOG_PREFIX} Unsynced extensions: `, unsyncedExtensions);
 +
 +	if (Object.keys(unsyncedExtensions).length !== 0) {
 +		const selection = await vscode.window.showWarningMessage(
@@ -255,12 +255,11 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/ext
 +
 +            quickPick.onDidAccept(async () => {
 +                const selectedExtensions = quickPick.selectedItems.map(item => item.label);
-+				await Promise.all(
-+					selectedExtensions.map(extensionId => {
-+						const extensionName = prePackagedExtensionsById[extensionId].name;
-+						installExtension(prePackagedExtensionsById[extensionId], pvExtensionsByName[extensionName]);
-+					})
-+				);
++
++				for (const extensionId of selectedExtensions) {
++					const extensionName = prePackagedExtensionsById[extensionId].name;
++					await installExtension(prePackagedExtensionsById[extensionId], pvExtensionsByName[extensionName]);
++				}
 +				await refreshExtensionsMetadata();
 +
 +                quickPick.hide();
@@ -317,12 +316,11 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/uti
 +
 +import {
 +	ExtensionInfo,
-+	IMAGE_EXTENSIONS_DIR,
 +	LOG_PREFIX,
 +	PERSISTENT_VOLUME_EXTENSIONS_DIR,
 +} from "./constants"
 +
-+async function getExtensionsFromDirectory(directoryPath: string): Promise<ExtensionInfo[]> {
++export async function getExtensionsFromDirectory(directoryPath: string): Promise<ExtensionInfo[]> {
 +	const results: ExtensionInfo[] = [];
 +	try {
 +		const items = await fs.readdir(directoryPath);
@@ -357,7 +355,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/uti
 +	return results;
 +}
 +
-+async function getInstalledExtensions(): Promise<string[]> {
++export async function getInstalledExtensions(): Promise<string[]> {
 +	const command = "./scripts/code-server.sh";
 +	// todo: uncomment correct code
 +	//const command = "sagemaker-code-editor";
@@ -377,7 +375,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/uti
 +	}
 +}
 +
-+async function refreshExtensionsMetadata(): Promise<void> {
++export async function refreshExtensionsMetadata(): Promise<void> {
 +	const metaDataFile = path.join(PERSISTENT_VOLUME_EXTENSIONS_DIR, "extensions.json");
 +	try {
 +		await fs.unlink(metaDataFile);
@@ -388,7 +386,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/uti
 +	}
 +}
 +
-+async function installExtension(
++export async function installExtension(
 +	prePackagedExtensionInfo: ExtensionInfo, installedExtensionInfo?: ExtensionInfo | undefined
 +): Promise<void> {
 +	if (installedExtensionInfo) {
@@ -465,114 +463,4 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/uti
 +		console.error(`${LOG_PREFIX} ${error}`);
 +	}
 +}
-+
-+export async function activate(context: vscode.ExtensionContext) {
-+
-+	// this extension will only activate within a sagemaker app
-+	const isSageMakerApp = !!process.env?.SAGEMAKER_APP_TYPE_LOWERCASE;
-+	if (!isSageMakerApp) {
-+		return;
-+	}
-+
-+	// get installed extensions. this could be different from pvExtensions b/c vscode doesn't delete the assets
-+	// for an old extension when uninstalling or changing versions
-+	const installedExtensions = new Set(await getInstalledExtensions());
-+	console.log(`${LOG_PREFIX} Found installed extensions: `, Array.from(installedExtensions));
-+
-+	const prePackagedExtensions: ExtensionInfo[] = await getExtensionsFromDirectory(IMAGE_EXTENSIONS_DIR);
-+	const prePackagedExtensionsById: Record<string, ExtensionInfo> = {};
-+	prePackagedExtensions.forEach(extension => {
-+		prePackagedExtensionsById[extension.identifier] = extension;
-+	});
-+
-+	console.log(`${LOG_PREFIX} Found pre-packaged extensions: `, prePackagedExtensions);
-+
-+	const pvExtensions = await getExtensionsFromDirectory(PERSISTENT_VOLUME_EXTENSIONS_DIR);
-+	const pvExtensionsByName: Record<string, ExtensionInfo> = {};
-+	const pvExtensionsById: Record<string, ExtensionInfo> = {};
-+	pvExtensions.forEach(extension => {
-+		if (installedExtensions.has(extension.identifier)) {  // only index extensions that are installed
-+			pvExtensionsByName[extension.name] = extension;
-+			pvExtensionsById[extension.identifier] = extension;
-+		}
-+	});
-+	console.log(`${LOG_PREFIX} Found extensions in persistent volume: `, JSON.stringify(pvExtensionsById, null, 2));
-+
-+	// check each pre-packaged extension, record if it is not in installed extensions or version mismatch
-+	// store unsynced extensions as {identifier pre-packaged ext: currently installed version}
-+	const unsyncedExtensions: Record<string, string | null> = {}
-+	prePackagedExtensions.forEach(extension => {
-+		const id = extension.identifier;
-+		if (!(installedExtensions.has(id))){
-+			unsyncedExtensions[id] = pvExtensionsByName[extension.name]?.version ?? null;
-+		}
-+	});
-+	console.log(`${LOG_PREFIX} Unsynced extensions: `, JSON.stringify(unsyncedExtensions, null, 2));
-+
-+	if (Object.keys(unsyncedExtensions).length !== 0) {
-+		const selection = await vscode.window.showWarningMessage(
-+			'Warning: You have unsynchronized extensions from SageMaker Distribution \
-+			which could result in incompatibilities with Code Editor. Do you want to install them?',
-+		"Synchronize Extensions", "Dismiss");
-+
-+		if (selection === "Synchronize Extensions") {
-+            const quickPick = vscode.window.createQuickPick();
-+            quickPick.items = Object.keys(unsyncedExtensions).map(extensionId => ({
-+				label: extensionId,
-+				description: unsyncedExtensions[extensionId] ? `Currently installed version: ${unsyncedExtensions[extensionId]}` : undefined,
-+			}));
-+            quickPick.placeholder = 'Select extensions to install';
-+            quickPick.canSelectMany = true;
-+			quickPick.ignoreFocusOut = true;
-+
-+            quickPick.onDidAccept(async () => {
-+                const selectedExtensions = quickPick.selectedItems.map(item => item.label);
-+				await Promise.all(
-+					selectedExtensions.map(extensionId => {
-+						const extensionName = prePackagedExtensionsById[extensionId].name;
-+						installExtension(prePackagedExtensionsById[extensionId], pvExtensionsByName[extensionName]);
-+					})
-+				);
-+				await refreshExtensionsMetadata();
-+
-+                quickPick.hide();
-+				await vscode.window.showInformationMessage(
-+					'Extensions have been installed. Would you like to reload the window?',
-+					{ modal: true },
-+					'Reload'
-+				).then(selection => {
-+					if (selection === 'Reload') {
-+						vscode.commands.executeCommand('workbench.action.reloadWindow');
-+					}
-+				});
-+            });
-+
-+            quickPick.show();
-+        }
-+	}
-+}
 \ No newline at end of file
-Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/tsconfig.json
-===================================================================
---- /dev/null
-+++ sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/tsconfig.json
-@@ -0,0 +1,10 @@
-+{
-+	"extends": "../tsconfig.base.json",
-+	"compilerOptions": {
-+		"outDir": "./out"
-+	},
-+	"include": [
-+		"../sagemaker-extensions-sync/src/**/*",
-+		"../../src/vscode-dts/vscode.d.ts"
-+	]
-+}
-Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/yarn.lock
-===================================================================
---- /dev/null
-+++ sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/yarn.lock
-@@ -0,0 +1,4 @@
-+# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
-+# yarn lockfile v1
-+
-+
