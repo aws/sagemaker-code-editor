@@ -62,6 +62,7 @@ const compilations = [
 	'extensions/simple-browser/tsconfig.json',
 	'extensions/sagemaker-extension/tsconfig.json',
 	'extensions/sagemaker-idle-extension/tsconfig.json',
+	'extensions/sagemaker-extensions-sync/tsconfig.json',
 	'extensions/sagemaker-terminal-crash-mitigation/tsconfig.json',
 	'extensions/sagemaker-open-notebook-extension/tsconfig.json',
 	'extensions/tunnel-forwarding/tsconfig.json',

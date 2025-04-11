@@ -1,3 +1,4 @@
+update-csp.patch
 sagemaker-extension.diff
 disable-online-services.diff
 disable-telemetry.diff
@@ -10,3 +11,4 @@ sagemaker-idle-extension.patch
 terminal-crash-mitigation.patch
 sagemaker-open-notebook-extension.patch
 display-language.diff
+sagemaker-extensions-sync.patch
