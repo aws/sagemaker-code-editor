@@ -2,7 +2,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/product/common/product.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
-@@ -47,6 +47,27 @@ else if (globalThis._VSCODE_PRODUCT_JSON
+@@ -49,6 +49,14 @@ else if (globalThis._VSCODE_PRODUCT_JSON
  			version: pkg.version
  		});
  	}
@@ -11,19 +11,6 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
 +		console.log(`Custom extensions gallery detected. Parsing...`);
 +		Object.assign(product, {
 +			extensionsGallery: JSON.parse(env['EXTENSIONS_GALLERY'])
-+		});
-+	} else {
-+		console.log(`Using default extensions gallery.`);
-+		Object.assign(product, {
-+			extensionsGallery: (product.extensionsGallery || {
-+				serviceUrl: "https://open-vsx.org/vscode/gallery",
-+				itemUrl: "https://open-vsx.org/vscode/item",
-+				resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
-+				controlUrl: "",
-+				recommendationsUrl: "",
-+				nlsBaseUrl: "",
-+				publisherUrl: ""
-+			})
 +		});
 +	}
 +	console.log(JSON.stringify(product.extensionsGallery, null, 2));
@@ -34,15 +21,15 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts
-@@ -64,6 +64,8 @@ import { createActionViewItem } from '..
- import { SeverityIcon } from '../../../../base/browser/ui/severityIcon/severityIcon.js';
- import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
- import { KeyCode } from '../../../../base/common/keyCodes.js';
+@@ -70,6 +70,8 @@ import { Codicon } from '../../../../ba
+ import { IExtensionGalleryManifest, IExtensionGalleryManifestService } from '../../../../platform/extensionManagement/common/extensionGalleryManifest.js';
+ import { URI } from '../../../../base/common/uri.js';
+ import { IMcpGalleryService } from '../../../../platform/mcp/common/mcpManagement.js';
 +import { IProductService } from '../../../../platform/product/common/productService.js';
 +import { memoize } from '../../../../base/common/decorators.js';
- import { ThemeIcon } from '../../../../base/common/themables.js';
- import { Codicon } from '../../../../base/common/codicons.js';
- import { IExtensionGalleryManifest, IExtensionGalleryManifestService } from '../../../../platform/extensionManagement/common/extensionGalleryManifest.js';
+ 
+ export const ExtensionsSortByContext = new RawContextKey<string>('extensionsSortByValue', '');
+ export const SearchMarketplaceExtensionsContext = new RawContextKey<boolean>('searchMarketplaceExtensions', false);
 @@ -531,6 +533,7 @@ export class ExtensionsViewPaneContainer
  		@ICommandService private readonly commandService: ICommandService,
  		@IMcpGalleryService private readonly mcpGalleryService: IMcpGalleryService,
@@ -80,7 +67,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -335,7 +335,6 @@
+@@ -321,7 +321,6 @@
  
  		const staticRoute = posix.join(basePath, this._productPath, STATIC_PATH);
  		const callbackRoute = posix.join(basePath, this._productPath, CALLBACK_PATH);
@@ -88,7 +75,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  		const resolveWorkspaceURI = (defaultLocation?: string) => defaultLocation && URI.file(resolve(defaultLocation)).with({ scheme: Schemas.vscodeRemote, authority: remoteAuthority });
  
-@@ -347,20 +346,13 @@
+@@ -333,20 +332,13 @@
  		} : undefined;
  
  		const productConfiguration: Partial<Mutable<IProductConfiguration>> = {
@@ -162,9 +149,5 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/comm
 +		// test if the path starts with the web extension resource end point segment
 +		return uriPath.startsWith(WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT);
  	}
- 
- }
- 
- }
- 
+
  }

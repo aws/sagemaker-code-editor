@@ -71,6 +71,7 @@ Index: sagemaker-code-editor/vscode/src/vs/base/common/platform.ts
  }
  
  // Unknown environment
+
 Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/code/browser/workbench/workbench.html
@@ -186,7 +187,6 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/languagePacks/browser/langua
 +		return this.languagePackService.getInstalledLanguages()
  	}
  }
-
 Index: sagemaker-code-editor/vscode/src/vs/server/node/serverEnvironmentService.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/serverEnvironmentService.ts
@@ -223,7 +223,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/serverServices.ts
  import { ProtocolConstants } from '../../base/parts/ipc/common/ipc.net.js';
  import { IConfigurationService } from '../../platform/configuration/common/configuration.js';
  import { ConfigurationService } from '../../platform/configuration/common/configurationService.js';
-@@ -225,6 +225,9 @@ export async function setupServerService
+@@ -241,6 +241,9 @@ export async function setupServerService
  		const channel = new ExtensionManagementChannel(extensionManagementService, (ctx: RemoteAgentConnectionContext) => getUriTransformer(ctx.remoteAuthority));
  		socketServer.registerChannel('extensions', channel);
 
@@ -238,7 +238,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -401,7 +405,7 @@ export class WebClientServer {
+@@ -428,7 +437,7 @@ export class WebClientServer {
  			`frame-src 'self' https://*.vscode-cdn.net data:;`,
  			'worker-src \'self\' data: blob:;',
  			'style-src \'self\' \'unsafe-inline\';',

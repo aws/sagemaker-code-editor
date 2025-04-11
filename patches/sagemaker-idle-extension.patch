@@ -267,7 +267,7 @@ Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
 +++ sagemaker-code-editor/vscode/build/npm/dirs.js
-@@ -40,6 +40,7 @@ const dirs = [
+@@ -39,6 +39,7 @@ const dirs = [
  	'extensions/php-language-features',
  	'extensions/references-view',
  	'extensions/sagemaker-extension',
@@ -296,7 +296,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  export class WebClientServer {
  
-@@ -131,6 +132,9 @@ export class WebClientServer {
+@@ -132,6 +133,9 @@ export class WebClientServer {
  				// callback support
  				return this._handleCallback(res);
  			}

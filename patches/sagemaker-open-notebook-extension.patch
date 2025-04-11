@@ -2,7 +2,7 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/gulpfile.extensions.js
 +++ sagemaker-code-editor/vscode/build/gulpfile.extensions.js
-@@ -63,6 +63,7 @@ const compilations = [
+@@ -61,6 +61,7 @@ const compilations = [
  	'extensions/sagemaker-extension/tsconfig.json',
  	'extensions/sagemaker-idle-extension/tsconfig.json',
  	'extensions/sagemaker-terminal-crash-mitigation/tsconfig.json',
@@ -42,7 +42,7 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
 +++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts
-@@ -950,6 +950,17 @@ export class ExtensionsWorkbenchService
+@@ -1084,6 +1084,17 @@ export class ExtensionsWorkbenchService
  		urlService.registerHandler(this);
  
  		this.whenInitialized = this.initialize();

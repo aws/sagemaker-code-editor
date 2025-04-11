@@ -5,3 +5,4 @@ vscode
 test/integ/cypress/screenshots
 test/integ/cypress/videos
 vscode
+vscode-reh-web-linux-x64/node

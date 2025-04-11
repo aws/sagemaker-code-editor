@@ -1,9 +1,17 @@
+# Workflow name
 name: Build
 
+# This workflow is triggered on pushes and pull requests to the main branch.
 on:
   push:
+    #branches:
+      #- main
   pull_request:
+    #branches:
+      #- main
 
+# Concurrency settings to cancel in-progress runs for the same PR or branch
+# This prevents wasting resources on outdated commits.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -11,35 +19,44 @@ concurrency:
 jobs:
   build:
     name: Build sagemaker-code-editor
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
     env:
+      # Environment variable to optimize the build process
       DISABLE_V8_COMPILE_CACHE: 1
 
     steps:
+      # Step 1: Check out the repository code, including its submodules.
       - name: Checkout repo with submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # Step 2: Install system-level dependencies required for the build.
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y make gcc g++ libx11-dev xorg-dev libxkbfile-dev libsecret-1-dev libkrb5-dev python3 jq perl gettext automake autoconf quilt
 
+      # Step 3: Set up the Node.js environment. Version 20 is specified.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          # Use npm for caching, not yarn
           cache: 'npm'
           cache-dependency-path: '**/package-lock.json'
 
+      # Step 4: Apply patches from the 'patches' directory if it exists.
       - name: Apply patches (if any)
         run: |
           if [ -d patches ] && [ "$(ls -A patches)" ]; then
-            quilt push -a || true
+            set -e
+            quilt push -a
           fi
 
+      # Step 5: Generate a version string for this specific build.
+      # It's based on the commit SHA to create a unique identifier.
       - name: Set Development Version
         id: version
         run: |
@@ -48,24 +65,25 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Generated version for this build: $VERSION"
 
+      # Step 6: The main build process for vscode, now using npm.
       - name: Build vscode
         run: |
           cd vscode
           export DISABLE_V8_COMPILE_CACHE=1
           export UV_THREADPOOL_SIZE=4
-          
-          npm install
-          
-          VSCODE_RIPGREP_VERSION=$(jq -r '.dependencies."@vscode/ripgrep"' package.json)
-          mv package.json package.json.orig
-          jq 'del(.dependencies."@vscode/ripgrep")' package.json.orig > package.json
-          
-          npm install
-          npm install --ignore-scripts "@vscode/ripgrep@${VSCODE_RIPGREP_VERSION}"
-          
-          ARCH_ALIAS=linux-x64
-          npx gulp vscode-reh-web-${ARCH_ALIAS}-min
 
+          npm install -g node-gyp
+          
+          # Install dependencies using npm, skip optional and native modules
+          npm install
+          
+          # Run the gulp build task with memory optimizations
+          ARCH_ALIAS=linux-x64
+          node --max-old-space-size=32768 --optimize-for-size \
+              ./node_modules/gulp/bin/gulp.js \
+              "vscode-reh-web-${ARCH_ALIAS}-min"
+
+      # Step 7: Find the exact path of the original build output directory.
       - name: Find build output
         id: find_output
         run: |
@@ -77,6 +95,7 @@ jobs:
           echo "Build output found at: $BUILD_PATH"
           echo "build_path=$BUILD_PATH" >> $GITHUB_OUTPUT
       
+      # Step 8: Rename the build output directory to sagemaker-code-editor
       - name: Rename build output directory
         id: rename_output
         run: |
@@ -86,6 +105,7 @@ jobs:
           echo "Renamed build output directory to: $PARENT_DIR/sagemaker-code-editor"
           echo "build_path=$PARENT_DIR/sagemaker-code-editor" >> $GITHUB_OUTPUT
       
+      # Step 9: Create a compressed tarball of the renamed build output.
       - name: Create tarball archive
         run: |
           TARBALL="sagemaker-code-editor-${{ env.VERSION }}.tar.gz"
@@ -95,9 +115,23 @@ jobs:
           echo "Creating '$TARBALL' from '$BUILD_DIR_NAME' in '$PARENT_DIR'"
           tar czf $TARBALL -C "$PARENT_DIR" "$BUILD_DIR_NAME"
       
+      # Step 10: Upload the tarball as a build artifact.
       - name: Upload build artifact
         if: env.ACT == ''
         uses: actions/upload-artifact@v4
         with:
           name: npm-package
           path: sagemaker-code-editor-${{ env.VERSION }}.tar.gz
+  # Run end-to-end tests after the build is complete
+  run-e2e-tests:
+    name: Run e2e tests
+    runs-on: ubuntu-22.04
+    needs: build  # Ensure e2e tests run after build
+    steps:
+      # Checkout repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Output placeholder message for e2e tests
+      - name: Test of e2e test
+        run: echo "Test of e2e test"

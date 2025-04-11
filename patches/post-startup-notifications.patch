@@ -750,7 +750,7 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/gulpfile.extensions.js
 +++ sagemaker-code-editor/vscode/build/gulpfile.extensions.js
-@@ -65,6 +65,7 @@ const compilations = [
+@@ -64,6 +64,7 @@ const compilations = [
  	'extensions/sagemaker-terminal-crash-mitigation/tsconfig.json',
  	'extensions/sagemaker-open-notebook-extension/tsconfig.json',
  	'extensions/sagemaker-ui-dark-theme/tsconfig.json',

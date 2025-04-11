@@ -21,24 +21,13 @@ This script will:
 - runs `./scripts/copy-resource.sh` that will copy patched version of code - oss from `./vscode` into `./patched-vscode` folder along with icon(s) and svg(s) from `./resources` folder
 - runs `yarn install` and downloads built in extensions on patched submodule
 
-Usage:
-```bash
-Usage: install.sh [-t <VERSION>] [-v] [-h]
-
-Otions:
-  -t <VERSION>    Create a tarball with the specified version
-  -v              Enable verbose output
-  -h              Show this help message
-```
-
 ## Local Setup
 
-- Install Prerequisite tools described [here](https://web.archive.org/web/20240711074020/https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites) for your operating system.
+- Install Prerequisite tools described [here](https://web.archive.org/web/20231012223533/https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites) for your operating system.
 - Run `sh ./scripts/install.sh`
 - Run `yarn watch` from within the `vscode` folder
 - Open a new terminal and run `./vscode/scripts/code-server.sh --launch`
 
-<<<<<<< HEAD
 ## Make Commands
 
 Available make targets for building and testing:
@@ -47,45 +36,11 @@ Available make targets for building and testing:
 - `make build` - Build SageMaker Code Editor and output artifacts to ./artifacts
 - `make install-act` - Install act (GitHub Actions runner) for local testing
 - `make run-github` - Run complete GitHub Actions workflow locally using act
+- `make run-local` - Build and run SageMaker Code Editor locally on port 8888 from source
 - `make run-local TARBALL=<tarball-name>` - Build and run SageMaker Code Editor locally on port 8888 using specified tarball
 - `make clean` - Clean build artifacts and act temporary files
 
-Example: `make run-local TARBALL=code-editor1.8.0b5.tar.gz`
-=======
-## Test Execution
-Follow the previous steps to patch and build the project.
-
-Use the `./scripts/test.sh` script for testing.
-
-```
-Usage: test.sh [OPTIONS]
-
-Options:
-    -w '<WEBSITE-URL>'|--website='<WEBSITE_URL>'        URL of the Code Editor instance to test (default: http://localhost:9888).
-    -u|--unit-test                                      Run OSS unit tests.
-    -i|--integ-test                                     Run OSS integration tests.
-    -s|--style-check                                    Run OSS style check.
-    -c|--cypress-integ-test                             Run Code Editor UI tests.
-    -l|--local                                          Run Code Editor UI tests against a local instance (requires -c).
-    -n|--no-patches                                     Skip automatic patching of OSS.
-    -h|--help                                           Show this help message and exit.
-```
-***Note***: make sure you have the `'`quotes`'` around the website url.
-
-### Example
-From the `sage-maker-code-editor` directory, run the following command in your terminal:
-
-```shell
-sh ./scripts/test.sh --website='http://localhost:9090' -uicl
-```
-This will run the OSS unit and integration tests, and the Cypress integration tests for a local Code Editor instance at `localhost:9090`. 
->>>>>>> 0e834c9c (add default automatic patching)
-
-## Publishing Releases
-To publish a new release using the GitHub Action, push a tag that starts with `v`, e.g. `v1.5.0`. This will trigger an Action to create a tarball and publish it in a release with the tag `v1.5.0`. Currently the Action will require manual approval from @aws-pangestu, @aws-navinns, or @aws-asolidu.
-
-### Future
-We hope to extend this Action to also automatically update the CodeEditor feedstock repository.
+Example: `make run-local TARBALL=sagemaker-code-editor-1.101.2.tar.gz`
 
 ## Troubleshooting and Feedback
 

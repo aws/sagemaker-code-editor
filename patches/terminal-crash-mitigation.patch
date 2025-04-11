@@ -2,7 +2,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-terminal-crash-mitigati
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-terminal-crash-mitigation/.vscodeignore
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,11 @@
 +.vscode/**
 +.vscode-test/**
 +out/test/**
@@ -13,7 +13,6 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-terminal-crash-mitigati
 +out/test/**
 +out/**
 +cgmanifest.json
-+yarn.lock
 +preview-src/**
 Index: sagemaker-code-editor/vscode/extensions/sagemaker-terminal-crash-mitigation/extension-browser.webpack.config.js
 ===================================================================

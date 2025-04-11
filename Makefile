@@ -40,23 +40,28 @@ run-github: install-act
 
 run-local:
 	@if [ -z "$(TARBALL)" ]; then \
-		echo "Usage: make run-local TARBALL=<tarball-name>"; \
-		echo "Example: make run-local TARBALL=sagemaker-code-editor-1.101.2.tar.gz"; \
-		exit 1; \
+		echo "Building and running SageMaker Code Editor locally on port 8888..."; \
+		docker build -f scripts/Dockerfile.dev -t local-code-editor-dev . || exit 1; \
+		echo "Stopping container..."; \
+		docker stop local-code-editor-dev; \
+		echo "Starting container on http://localhost:8888"; \
+		docker run --rm -d -p 8888:8000 -v .:/workspace --entrypoint /workspace/scripts/run-code-editor-dev.sh --name local-code-editor-dev local-code-editor-dev || exit 1; \
+		docker logs -f local-code-editor-dev; \
+	else \
+		echo "Building and running SageMaker Code Editor locally on port 8888..."; \
+		docker build -f scripts/Dockerfile.run --build-arg TARBALL=$(TARBALL) -t local-code-editor . || exit 1; \
+		echo "Stopping container..."; \
+		docker stop local-code-editor; \
+		echo "Starting container on http://localhost:8888"; \
+		docker run --rm -d -p 8888:8000 --name local-code-editor local-code-editor || exit 1; \
+		docker logs -f local-code-editor; \
 	fi
-	@echo "Building and running SageMaker Code Editor locally on port 8888..."
-	docker build -f scripts/Dockerfile.run --build-arg TARBALL=$(TARBALL) -t local-code-editor .
-	docker stop local-code-editor 2>/dev/null || true
-	@echo "Starting container on http://localhost:8888"
-	docker run --rm -d -p 8888:8000 --name local-code-editor local-code-editor
-	docker logs -f local-code-editor
 
 clean:
 	@echo "Cleaning build artifacts..."
-	rm -f artifacts
+	rm -f artifacts/*
 	@echo "Clean build artifacts completed"
 	@echo "Cleaning act temporary files and Docker images..."
 	@echo "Removing act cache..."
 	@rm -rf ~/.cache/act 2>/dev/null || true
 	@echo "Act cleanup completed"
-
