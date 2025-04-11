@@ -151,7 +151,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/src/con
 @@ -0,0 +1,21 @@
 +// constants
 +export const PERSISTENT_VOLUME_EXTENSIONS_DIR = "/home/sagemaker-user/sagemaker-code-editor-server-data/extensions";
-+export const IMAGE_EXTENSIONS_DIR = "/opt/amazon/sagemaker-code-editor-server-data/extensions";
++export const IMAGE_EXTENSIONS_DIR = "/opt/amazon/sagemaker/sagemaker-code-editor-server-data/extensions";
 +export const LOG_PREFIX = "[sagemaker-extensions-sync]";
 +
 +export class ExtensionInfo {
