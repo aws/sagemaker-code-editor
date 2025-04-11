@@ -40,6 +40,7 @@ const dirs = [
 	'extensions/php-language-features',
 	'extensions/references-view',
 	'extensions/sagemaker-extension',
+	'extensions/sagemaker-extensions-sync',
 	'extensions/sagemaker-idle-extension',
 	'extensions/sagemaker-terminal-crash-mitigation',
 	'extensions/sagemaker-open-notebook-extension',
