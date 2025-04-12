@@ -46,7 +46,17 @@ Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/code/browser/workbench/workbench.html
 +++ sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
-@@ -46,14 +46,26 @@
+@@ -19,6 +19,9 @@
+ 		<!-- Workbench Configuration -->
+ 		<meta id="vscode-workbench-web-configuration" data-settings="{{WORKBENCH_WEB_CONFIGURATION}}">
+ 
++		<!-- NLS Configuration -->
++		<meta id="vscode-remote-nls-configuration" data-settings="{{NLS_CONFIGURATION}}">
++
+ 		<!-- Workbench Auth Session -->
+ 		<meta id="vscode-workbench-auth-session" data-settings="{{WORKBENCH_AUTH_SESSION}}">
+ 
+@@ -46,14 +49,26 @@
  		// Normalize locale to lowercase because translationServiceUrl is case-sensitive.
  		// ref: https://github.com/microsoft/vscode/issues/187795
  		const locale = localStorage.getItem('vscode.nls.locale') || navigator.language.toLowerCase();
@@ -174,7 +184,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
 +	let result = _cache.get(key);
 +	if (!result) {
 +		// The OS Locale on the remote side really doesn't matter, so we pass in the same language
-+		result = lp.getNLSConfiguration("dummy_commmit", userDataPath, metaData, language, language).then(value => {
++		result = lp.getNLSConfiguration("dummy_commit", userDataPath, metaData, language, language).then(value => {
 +			if (InternalNLSConfiguration.is(value)) {
 +				value._languagePackSupport = true;
 +			}

@@ -17,7 +17,7 @@ export function getNLSConfiguration(language: string, userDataPath: string): Pro
 	let result = _cache.get(key);
 	if (!result) {
 		// The OS Locale on the remote side really doesn't matter, so we pass in the same language
-		result = lp.getNLSConfiguration("dummy_commmit", userDataPath, metaData, language, language).then(value => {
+		result = lp.getNLSConfiguration("dummy_commit", userDataPath, metaData, language, language).then(value => {
 			if (InternalNLSConfiguration.is(value)) {
 				value._languagePackSupport = true;
 			}
