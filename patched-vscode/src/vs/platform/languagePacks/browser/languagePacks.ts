@@ -5,18 +5,24 @@
 
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
 import { URI } from 'vs/base/common/uri';
+import { ProxyChannel } from 'vs/base/parts/ipc/common/ipc';
 import { IExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { IExtensionResourceLoaderService } from 'vs/platform/extensionResourceLoader/common/extensionResourceLoader';
-import { ILanguagePackItem, LanguagePackBaseService } from 'vs/platform/languagePacks/common/languagePacks';
+import { ILanguagePackItem, ILanguagePackService, LanguagePackBaseService } from 'vs/platform/languagePacks/common/languagePacks';
 import { ILogService } from 'vs/platform/log/common/log';
+import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
 
 export class WebLanguagePacksService extends LanguagePackBaseService {
+	private readonly languagePackService: ILanguagePackService;
+
 	constructor(
+		@IRemoteAgentService remoteAgentService: IRemoteAgentService,
 		@IExtensionResourceLoaderService private readonly extensionResourceLoaderService: IExtensionResourceLoaderService,
 		@IExtensionGalleryService extensionGalleryService: IExtensionGalleryService,
 		@ILogService private readonly logService: ILogService
 	) {
 		super(extensionGalleryService);
+		this.languagePackService = ProxyChannel.toService<ILanguagePackService>(remoteAgentService.getConnection()!.getChannel('languagePacks'))
 	}
 
 	async getBuiltInExtensionTranslationsUri(id: string, language: string): Promise<URI | undefined> {
@@ -72,6 +78,6 @@ export class WebLanguagePacksService extends LanguagePackBaseService {
 
 	// Web doesn't have a concept of language packs, so we just return an empty array
 	getInstalledLanguages(): Promise<ILanguagePackItem[]> {
-		return Promise.resolve([]);
+		return this.languagePackService.getInstalledLanguages()
 	}
 }
