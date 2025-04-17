@@ -27,10 +27,6 @@ export const FIVE_MINUTES_INTERVAL_MILLIS = 5 * 60 * 1000;
 
 export const SAGEMAKER_METADATA_PATH = '/opt/ml/metadata/resource-metadata.json';
 
-// Service name identifier for SageMaker Unified Studio
-export const SMUS_SERVICE_NAME = 'SageMakerUnifiedStudio';
-export const SERVICE_NAME_ENV_VAR = 'SERVICE_NAME';
-
 export class SagemakerCookie {
 	authMode: string
 	expiryTime: number
@@ -60,11 +56,6 @@ export class SagemakerResourceMetadata {
 	ResourceArn?: string
 	ResourceName?: string
 	AppImageVersion?: string
-	AdditionalMetadata?: {
-		DataZoneDomainId?: string
-		DataZoneProjectId?: string
-		DataZoneDomainRegion?: string
-	}
 };
 export function isSSOMode(cookie: SagemakerCookie) {
 	return (cookie.authMode === AUTH_MODE.SSO)
@@ -78,35 +69,4 @@ export function getExpiryTime(cookie: SagemakerCookie): number {
 	} else {
 		return -1;
 	}
-}
-
-/**
- * Constructs the SMUS portal URL using domain, region, and project information
- * Returns null if not in SMUS environment or if required fields are missing
- */
-export const getSmusVscodePortalUrl = (metadata: SagemakerResourceMetadata | null): string | null => {
-	if (process.env[SERVICE_NAME_ENV_VAR] !== SMUS_SERVICE_NAME) {
-		return null;
-	}
-
-	if (!metadata || !metadata.AdditionalMetadata) {
-		// fail silently not to block users
-		console.error('[SMUS] Metadata is undefined or null');
-		return null;
-	}
-
-	const { DataZoneDomainId, DataZoneDomainRegion, DataZoneProjectId } = metadata.AdditionalMetadata;
-
-	if (!DataZoneDomainId || !DataZoneDomainRegion || !DataZoneProjectId) {
-		// fail silently not to block users
-		// TODO: add monitoring to detect such cases
-		console.error('[SMUS] Required fields missing in metadata:', {
-			DataZoneDomainId: !!DataZoneDomainId,
-			DataZoneDomainRegion: !!DataZoneDomainRegion,
-			DataZoneProjectId: !!DataZoneProjectId
-		});
-		return null;
-	}
-
-	return `https://${DataZoneDomainId}.sagemaker.${DataZoneDomainRegion}.on.aws/projects/${DataZoneProjectId}/overview`;
 }

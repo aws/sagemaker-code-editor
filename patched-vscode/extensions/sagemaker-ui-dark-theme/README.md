@@ -1,1 +1,0 @@
-# SageMaker UI Dark Theme
