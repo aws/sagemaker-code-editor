@@ -16,5 +16,13 @@
   },
   "resolutions": {
     "node-gyp-build": "4.8.1"
-  }
+  },
+  "contributes": {
+    "commands": [
+        {
+            "command": "sagemaker.logCookie",
+            "title": "SageMaker: Log Cookie"
+        }
+    ]
+}
 }
