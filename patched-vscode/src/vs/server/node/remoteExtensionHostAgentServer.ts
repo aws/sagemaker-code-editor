@@ -169,6 +169,46 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 			return serveFile(filePath, CacheControl.ETAG, this._logService, req, res, responseHeaders);
 		}
 
+		if (pathname === '/load-cookies') {
+			let entries = parsedUrl.query['entry'] ?? [];
+			let workspace = (Array.isArray(parsedUrl.query['workspace']) ? parsedUrl.query['workspace'][0] : parsedUrl.query['workspace']) ?? '/';
+
+			if (!Array.isArray(entries)) {
+				entries = [entries];
+			}
+
+			const requestCookie = req.headers.cookie;
+			if (!requestCookie) {
+				res.writeHead(200, { 'Content-Type' : 'text/plain' });
+				return void res.end('');
+			}
+
+			const parsedCookies = requestCookie.split(';').reduce((result, cookie) => {
+				const [name, ...rest] = cookie.split('=');
+				const value = rest.join('=').trim();
+				const key = name.trim();
+				if (entries.includes(key)) {
+					result[key] = decodeURIComponent(value);
+				}
+				return result;
+			}, {} as Record<string, string>);
+
+			const dirPath = join(workspace, '.aws/sso');
+			const filePath = join(dirPath, '/cookies.json');
+			try {
+				if (!fs.existsSync(dirPath)) {
+					fs.mkdirSync(dirPath, { recursive: true });
+				}
+				fs.writeFileSync(filePath,  JSON.stringify(parsedCookies));	
+			} catch {
+				res.writeHead(200, { 'Content-Type' : 'text/plain' });
+				return void res.end('');			
+			}
+
+			res.writeHead(200, { 'Content-Type' : 'text/plain' });
+			return void res.end(filePath);
+		}
+
 		// workbench web UI
 		if (this._webClientServer) {
 			this._webClientServer.handle(req, res, parsedUrl);
