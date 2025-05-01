@@ -1,0 +1,151 @@
+Index: sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/platform/product/common/product.ts
++++ sagemaker-code-editor/vscode/src/vs/platform/product/common/product.ts
+@@ -47,6 +47,18 @@ else if (globalThis._VSCODE_PRODUCT_JSON
+ 			version: pkg.version
+ 		});
+ 	}
++
++	Object.assign(product, {
++		extensionsGallery: env['EXTENSIONS_GALLERY'] ? JSON.parse(env['EXTENSIONS_GALLERY']) : (product.extensionsGallery || {
++			serviceUrl: "https://open-vsx.org/vscode/gallery",
++			itemUrl: "https://open-vsx.org/vscode/item",
++			resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
++			controlUrl: "",
++			recommendationsUrl: "",
++			nlsBaseUrl: "",
++			publisherUrl: ""
++		})
++	});
+ }
+ 
+ // Web environment or unknown
+Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts
+@@ -64,6 +64,8 @@ import { ILocalizedString } from 'vs/pla
+ import { registerNavigableContainer } from 'vs/workbench/browser/actions/widgetNavigationCommands';
+ import { MenuWorkbenchToolBar } from 'vs/platform/actions/browser/toolbar';
+ import { createActionViewItem } from 'vs/platform/actions/browser/menuEntryActionViewItem';
++import { IProductService } from 'vs/platform/product/common/productService';
++import { memoize } from 'vs/base/common/decorators';
+ 
+ export const DefaultViewsContext = new RawContextKey<boolean>('defaultExtensionViews', true);
+ export const ExtensionsSortByContext = new RawContextKey<string>('extensionsSortByValue', '');
+@@ -87,7 +89,6 @@ const SortByUpdateDateContext = new RawC
+ const REMOTE_CATEGORY: ILocalizedString = localize2({ key: 'remote', comment: ['Remote as in remote machine'] }, "Remote");
+ 
+ export class ExtensionsViewletViewsContribution extends Disposable implements IWorkbenchContribution {
+-
+ 	private readonly container: ViewContainer;
+ 
+ 	constructor(
+@@ -516,7 +517,8 @@ export class ExtensionsViewPaneContainer
+ 		@IExtensionService extensionService: IExtensionService,
+ 		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
+ 		@IPreferencesService private readonly preferencesService: IPreferencesService,
+-		@ICommandService private readonly commandService: ICommandService
++		@ICommandService private readonly commandService: ICommandService,
++		@IProductService private readonly productService: IProductService,
+ 	) {
+ 		super(VIEWLET_ID, { mergeViewWithContainerWhenSingleView: true }, instantiationService, configurationService, layoutService, contextMenuService, telemetryService, extensionService, themeService, storageService, contextService, viewDescriptorService);
+ 
+@@ -544,6 +546,18 @@ export class ExtensionsViewPaneContainer
+ 		this.searchViewletState = this.getMemento(StorageScope.WORKSPACE, StorageTarget.MACHINE);
+ 	}
+ 
++	@memoize
++	get marketplaceHostname(): string {
++		console.log(`extensionsViewlet.ts.`);
++		console.log(JSON.stringify(this.productService.extensionsGallery, null, 2));
++
++		if (this.productService.extensionsGallery?.serviceUrl) {
++			return new URL(this.productService.extensionsGallery?.serviceUrl).hostname;
++		}
++
++		return 'Marketplace';
++	}
++
+ 	get searchValue(): string | undefined {
+ 		return this.searchBox?.getValue();
+ 	}
+@@ -558,8 +572,7 @@ export class ExtensionsViewPaneContainer
+ 		hide(overlay);
+ 
+ 		const header = append(this.root, $('.header'));
+-		const placeholder = localize('searchExtensions', "Search Extensions in Marketplace");
+-
++		const placeholder = localize('searchExtensions', 'Search Extensions in {0}', this.marketplaceHostname);
+ 		const searchValue = this.searchViewletState['query.value'] ? this.searchViewletState['query.value'] : '';
+ 
+ 		const searchContainer = append(header, $('.extensions-search-container'));
+@@ -924,4 +937,4 @@ export class MaliciousExtensionChecker i
+ 			}).then(() => undefined);
+ 		}, err => this.logService.error(err));
+ 	}
+-}
++}
+\ No newline at end of file
+Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
++++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
+@@ -317,19 +317,18 @@ export class WebClientServer {
+ 		const base = relativeRoot(basePath)
+ 		const vscodeBase = relativePath(basePath)
+ 
++		console.log(`webClientServer.ts 1.`);
++		console.log(JSON.stringify(this._productService.extensionsGallery, null, 2));
++
+ 		const productConfiguration = {
+ 			rootEndpoint: base,
+ 			embedderIdentifier: 'server-distro',
+-			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
+-				...this._productService.extensionsGallery,
+-				resourceUrlTemplate: this._webExtensionResourceUrlTemplate.with({
+-					scheme: 'http',
+-					authority: remoteAuthority,
+-					path: `${this._webExtensionRoute}/${this._webExtensionResourceUrlTemplate.authority}${this._webExtensionResourceUrlTemplate.path}`
+-				}).toString(true)
+-			} : undefined
++			extensionsGallery: this._productService.extensionsGallery,
+ 		} satisfies Partial<IProductConfiguration>;
+ 
++		console.log(`webClientServer.ts 2.`);
++		console.log(JSON.stringify(productConfiguration, null, 2));
++
+ 		if (!this._environmentService.isBuilt) {
+ 			try {
+ 				const productOverrides = JSON.parse((await Promises.readFile(join(APP_ROOT, 'product.overrides.json'))).toString());
+@@ -337,6 +336,9 @@ export class WebClientServer {
+ 			} catch (err) {/* Ignore Error */ }
+ 		}
+ 
++		console.log(`webClientServer.ts 3.`);
++		console.log(JSON.stringify(productConfiguration, null, 2));
++
+ 		const workbenchWebConfiguration = {
+ 			remoteAuthority,
+ 			serverBasePath: this._basePath,
+Index: sagemaker-code-editor/vscode/product.json
+===================================================================
+--- sagemaker-code-editor.orig/vscode/product.json
++++ sagemaker-code-editor/vscode/product.json
+@@ -33,15 +33,6 @@
+ 	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/ef65ac1ba57f57f2a3961bfe94aa20481caca4c6/out/vs/workbench/contrib/webview/browser/pre/",
+ 	"builtInExtensions": [
+ 	],
+-	"extensionsGallery": {
+-		"serviceUrl": "https://open-vsx.org/vscode/gallery",
+-		"itemUrl": "https://open-vsx.org/vscode/item",
+-		"resourceUrlTemplate": "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+-		"controlUrl": "",
+-		"recommendationsUrl": "",
+-		"nlsBaseUrl": "",
+-		"publisherUrl": ""
+-	},
+ 	"linkProtectionTrustedDomains": [
+ 		"https://open-vsx.org"
+ 	]

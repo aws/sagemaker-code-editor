@@ -12,3 +12,4 @@ terminal-crash-mitigation.patch
 sagemaker-open-notebook-extension.patch
 display-language.diff
 sagemaker-extensions-sync.patch
+custom-extensions-marketplace.diff
