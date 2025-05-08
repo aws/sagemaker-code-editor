@@ -1,0 +1,134 @@
+{
+    "name": "code-editor",
+    "license": "MIT",
+    "version": "0.0.0",
+    "description": "Run VS Code on a remote server.",
+    "homepage": "https://github.com/coder/code-editor",
+    "bugs": {
+      "url": "https://github.com/coder/code-editor/issues"
+    },
+    "repository": "https://github.com/coder/code-editor",
+    "scripts": {
+      "clean": "./ci/build/clean.sh",
+      "build": "./ci/build/build-code-editor.sh",
+      "compile": "yarn --cwd vscode compile",
+      "install": "yarn --cwd vscode install --frozen-lockfile",
+      "build:vscode": "./ci/build/build-vscode.sh",
+      "patch": "./ci/build/patch.sh",
+      "local-server": "./vscode/scripts/code-server.sh --launch",
+      "unittest": "./vscode/scripts/test.sh"
+    },
+    "main": "out/node/entry.js",
+    "devDependencies": {
+      "@schemastore/package": "^0.0.10",
+      "@types/compression": "^1.7.3",
+      "@types/cookie-parser": "^1.4.4",
+      "@types/express": "^4.17.17",
+      "@types/http-proxy": "1.17.7",
+      "@types/js-yaml": "^4.0.6",
+      "@types/node": "^18.0.0",
+      "@types/pem": "^1.14.1",
+      "@types/proxy-from-env": "^1.0.1",
+      "@types/safe-compare": "^1.1.0",
+      "@types/semver": "^7.5.2",
+      "@types/trusted-types": "^2.0.4",
+      "@types/ws": "^8.5.5",
+      "@typescript-eslint/eslint-plugin": "^6.7.2",
+      "@typescript-eslint/parser": "^6.7.2",
+      "audit-ci": "^6.6.1",
+      "doctoc": "^2.2.1",
+      "eslint": "^8.49.0",
+      "eslint-config-prettier": "^9.0.0",
+      "eslint-import-resolver-typescript": "^3.6.0",
+      "eslint-plugin-import": "^2.28.1",
+      "eslint-plugin-prettier": "^5.0.0",
+      "prettier": "^3.0.3",
+      "prettier-plugin-sh": "^0.14.0",
+      "ts-node": "^10.9.1",
+      "typescript": "^5.2.2"
+    },
+    "dependencies": {
+      "@coder/logger": "^3.0.1",
+      "argon2": "^0.31.1",
+      "compression": "^1.7.4",
+      "cookie-parser": "^1.4.6",
+      "env-paths": "^2.2.1",
+      "express": "5.0.0-beta.3",
+      "http-proxy": "^1.18.1",
+      "httpolyglot": "^0.1.2",
+      "i18next": "^23.5.1",
+      "js-yaml": "^4.1.0",
+      "limiter": "^2.1.0",
+      "pem": "^1.14.8",
+      "proxy-agent": "^6.3.1",
+      "qs": "6.12.1",
+      "rotating-file-stream": "^3.1.1",
+      "safe-buffer": "^5.2.1",
+      "safe-compare": "^1.1.4",
+      "semver": "^7.5.4",
+      "ws": "^8.14.2",
+      "xdg-basedir": "^4.0.0"
+    },
+    "resolutions": {
+      "@types/node": "^18.0.0"
+    },
+    "bin": {
+      "code-editor": "out/node/entry.js"
+    },
+    "keywords": [
+      "vscode",
+      "development",
+      "ide",
+      "coder",
+      "vscode-remote",
+      "browser-ide",
+      "remote-development"
+    ],
+    "engines": {
+      "node": "18"
+    },
+    "jest": {
+      "transform": {
+        "^.+\\.ts$": "<rootDir>/test/node_modules/ts-jest"
+      },
+      "testEnvironment": "node",
+      "testPathIgnorePatterns": [
+        "/node_modules/",
+        "/lib/",
+        "/out/",
+        "test/e2e"
+      ],
+      "collectCoverage": true,
+      "collectCoverageFrom": [
+        "<rootDir>/src/**/*.ts"
+      ],
+      "coverageDirectory": "<rootDir>/coverage",
+      "coverageReporters": [
+        "json",
+        "json-summary",
+        "text",
+        "clover"
+      ],
+      "coveragePathIgnorePatterns": [
+        "/out"
+      ],
+      "coverageThreshold": {
+        "global": {
+          "lines": 60
+        }
+      },
+      "modulePathIgnorePatterns": [
+        "<rootDir>/release-packages",
+        "<rootDir>/release",
+        "<rootDir>/release-standalone",
+        "<rootDir>/release-npm-package",
+        "<rootDir>/release-gcp",
+        "<rootDir>/release-images",
+        "<rootDir>/lib"
+      ],
+      "moduleNameMapper": {
+        "^.+\\.(css|less)$": "<rootDir>/test/utils/cssStub.ts"
+      },
+      "globalSetup": "<rootDir>/test/utils/globalUnitSetup.ts"
+    }
+  }
