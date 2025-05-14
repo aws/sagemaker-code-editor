@@ -331,14 +331,7 @@ export class WebClientServer {
 		const productConfiguration = {
 			rootEndpoint: base,
 			embedderIdentifier: 'server-distro',
-			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
-				...this._productService.extensionsGallery,
-				resourceUrlTemplate: this._webExtensionResourceUrlTemplate.with({
-					scheme: 'http',
-					authority: remoteAuthority,
-					path: `${this._webExtensionRoute}/${this._webExtensionResourceUrlTemplate.authority}${this._webExtensionResourceUrlTemplate.path}`
-				}).toString(true)
-			} : undefined
+			extensionsGallery: this._productService.extensionsGallery,
 		} satisfies Partial<IProductConfiguration>;
 
 		if (!this._environmentService.isBuilt) {
