@@ -10,5 +10,9 @@ license.diff
 sagemaker-idle-extension.patch
 terminal-crash-mitigation.patch
 sagemaker-open-notebook-extension.patch
+<<<<<<< HEAD
 display-language.diff
 sagemaker-extensions-sync.patch
+=======
+tar-fs-upgrade.patch
+>>>>>>> 5068c79e (upgraded tar-fs from 2.1.1 to 2.1.3)
