@@ -1,0 +1,14 @@
+/* Add the external link icon after the text in notification action button */
+.jp-toast-button::after {
+    content: "";
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    margin-left: 4px;
+    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true"><path d="M14 8.01v-6H8M14.02 2 8 8.01M6 2.01H2v12h12v-3.99" stroke="currentColor" fill="none" stroke-width="1" stroke-linejoin="round"></path></svg>');
+    filter: invert(1);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}

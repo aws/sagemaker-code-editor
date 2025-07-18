@@ -18,6 +18,9 @@
     "contributes": {
         "commands": []
     },
+    "files": [
+        "media/**"
+    ],
     "scripts": {
         "test": "jest",
         "compile": "gulp compile-extension:post-startup-notifications",
