@@ -15,10 +15,22 @@ interface MockFSWatcher extends chokidar.FSWatcher {
 jest.mock('vscode', () => ({
     window: {
         showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
+        showInformationMessage: jest.fn().mockReturnValue(Promise.resolve()),
         createOutputChannel: jest.fn()
+    },
+    env: {
+        openExternal: jest.fn()
+    },
+    Uri: {
+        parse: jest.fn(url => ({ toString: () => url }))
     }
 }));
+
+// Simple mock for localStorage
+global.localStorage = {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+} as any;
 
 jest.mock('fs');
 jest.mock('chokidar');
@@ -189,6 +201,43 @@ describe('SageMaker Unified Studio Extension Tests', () => {
         });
     });
 
+    describe('Q CLI Notification Tests', () => {
+        test('should show Q CLI notification with Learn More button', () => {
+            // Set up localStorage to simulate first-time user
+            (localStorage.getItem as jest.Mock).mockReturnValue(null);
+            
+            activate(mockContext);
+            
+            // Verify notification is shown with correct message and button
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                'The Amazon Q Command Line Interface (CLI) is installed. You can now access AI-powered assistance in your terminal.',
+                { modal: false },
+                { title: 'Learn More', isCloseAffordance: false }
+            );
+        });
+        
+        test('should open documentation when Learn More is clicked', async () => {
+            // Set up localStorage to simulate first-time user
+            (localStorage.getItem as jest.Mock).mockReturnValue(null);
+            
+            // Mock the user clicking "Learn More"
+            const mockSelection = { title: 'Learn More' };
+            (vscode.window.showInformationMessage as jest.Mock).mockReturnValue(Promise.resolve(mockSelection));
+            
+            activate(mockContext);
+            
+            // Wait for the promise to resolve
+            await new Promise(process.nextTick);
+            
+            // Verify the documentation link is opened
+            expect(vscode.env.openExternal).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    toString: expect.any(Function)
+                })
+            );
+        });
+    });
+    
     describe('Deactivation Tests', () => {
         test('should cleanup resources properly', () => {
             activate(mockContext);
