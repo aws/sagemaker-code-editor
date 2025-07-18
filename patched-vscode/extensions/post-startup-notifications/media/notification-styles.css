@@ -1,5 +1,5 @@
 /* Add the external link icon after the text in notification action button */
-.jp-toast-button::after {
+.monaco-button.monaco-text-button::after {
     content: "";
     display: inline-block;
     width: 14px;

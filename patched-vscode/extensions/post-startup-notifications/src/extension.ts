@@ -96,7 +96,7 @@ function showQCliNotification(): void {
         vscode.window.showInformationMessage(
             message,
             { modal: false },
-            { title: linkLabel, isCloseAffordance: false, className: 'jp-toast-button' }
+            { title: linkLabel, isCloseAffordance: false }
         ).then((selection: { title: string; }) => {
             if (selection && selection.title === linkLabel) {
                 vscode.env.openExternal(vscode.Uri.parse(link));
