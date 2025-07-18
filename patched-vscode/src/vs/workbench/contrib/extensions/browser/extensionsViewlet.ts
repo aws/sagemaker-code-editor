@@ -64,6 +64,8 @@ import { ILocalizedString } from 'vs/platform/action/common/action';
 import { registerNavigableContainer } from 'vs/workbench/browser/actions/widgetNavigationCommands';
 import { MenuWorkbenchToolBar } from 'vs/platform/actions/browser/toolbar';
 import { createActionViewItem } from 'vs/platform/actions/browser/menuEntryActionViewItem';
+import { IProductService } from 'vs/platform/product/common/productService';
+import { memoize } from 'vs/base/common/decorators';
 
 export const DefaultViewsContext = new RawContextKey<boolean>('defaultExtensionViews', true);
 export const ExtensionsSortByContext = new RawContextKey<string>('extensionsSortByValue', '');
@@ -87,7 +89,6 @@ const SortByUpdateDateContext = new RawContextKey<boolean>('sortByUpdateDate', f
 const REMOTE_CATEGORY: ILocalizedString = localize2({ key: 'remote', comment: ['Remote as in remote machine'] }, "Remote");
 
 export class ExtensionsViewletViewsContribution extends Disposable implements IWorkbenchContribution {
-
 	private readonly container: ViewContainer;
 
 	constructor(
@@ -516,7 +517,8 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer implements IE
 		@IExtensionService extensionService: IExtensionService,
 		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
 		@IPreferencesService private readonly preferencesService: IPreferencesService,
-		@ICommandService private readonly commandService: ICommandService
+		@ICommandService private readonly commandService: ICommandService,
+		@IProductService private readonly productService: IProductService,
 	) {
 		super(VIEWLET_ID, { mergeViewWithContainerWhenSingleView: true }, instantiationService, configurationService, layoutService, contextMenuService, telemetryService, extensionService, themeService, storageService, contextService, viewDescriptorService);
 
@@ -544,6 +546,15 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer implements IE
 		this.searchViewletState = this.getMemento(StorageScope.WORKSPACE, StorageTarget.MACHINE);
 	}
 
+	@memoize
+	get extensionsGalleryHostname(): string {
+		if (this.productService.extensionsGallery?.serviceUrl) {
+			return new URL(this.productService.extensionsGallery?.serviceUrl).hostname;
+		}
+
+		return 'Marketplace';
+	}
+
 	get searchValue(): string | undefined {
 		return this.searchBox?.getValue();
 	}
@@ -558,8 +569,7 @@ export class ExtensionsViewPaneContainer extends ViewPaneContainer implements IE
 		hide(overlay);
 
 		const header = append(this.root, $('.header'));
-		const placeholder = localize('searchExtensions', "Search Extensions in Marketplace");
-
+		const placeholder = localize('searchExtensions', 'Search extensions in {0}', this.extensionsGalleryHostname);
 		const searchValue = this.searchViewletState['query.value'] ? this.searchViewletState['query.value'] : '';
 
 		const searchContainer = append(header, $('.extensions-search-container'));

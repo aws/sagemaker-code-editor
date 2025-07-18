@@ -47,6 +47,27 @@ else if (globalThis._VSCODE_PRODUCT_JSON && globalThis._VSCODE_PACKAGE_JSON) {
 			version: pkg.version
 		});
 	}
+
+	if (env['EXTENSIONS_GALLERY']) {
+		console.log(`Custom extensions gallery detected. Parsing...`);
+		Object.assign(product, {
+			extensionsGallery: JSON.parse(env['EXTENSIONS_GALLERY'])
+		});
+	} else {
+		console.log(`Using default extensions gallery.`);
+		Object.assign(product, {
+			extensionsGallery: (product.extensionsGallery || {
+				serviceUrl: "https://open-vsx.org/vscode/gallery",
+				itemUrl: "https://open-vsx.org/vscode/item",
+				resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+				controlUrl: "",
+				recommendationsUrl: "",
+				nlsBaseUrl: "",
+				publisherUrl: ""
+			})
+		});
+	}
+	console.log(JSON.stringify(product.extensionsGallery, null, 2));
 }
 
 // Web environment or unknown

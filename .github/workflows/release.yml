@@ -1,0 +1,180 @@
+name: Automated Release
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on updates to the "main" branch which include a version tag
+  push:
+    tags:        
+      - '**'           # Push events to every tag including hierarchical tags like v1.0/beta
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+
+# Defines permissions granted to the GITHUB_TOKEN for this workflow run.
+# 'contents: write' is needed for actions like softprops/action-gh-release to create GitHub releases
+# and for peter-evans/create-pull-request if it were to commit to the same repo
+
+permissions:
+  contents: write
+
+  
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This job checks if the pushed tag is a valid version tag (starts with 'v')
+  check-tag:
+    runs-on: ubuntu-latest
+    steps:
+      # This step performs the tag check
+      - name: Check tag is version tag
+        id: check # Assign an ID to this step to reference its outputs
+        run: |
+          # Check if the GitHub reference (github.ref) starts with 'refs/tags/v'
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            REF="${{ github.ref }}"
+            VERSION="${REF##refs/tags/v}"
+            echo "Tag starts with 'v'."
+            echo "Version: ${VERSION}"
+            echo "Continuing..."
+            # Set the version as an output variable for other jobs/steps
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "The tag doesn't start with 'v'. To release a new version, the tag must start with 'v'"
+            exit 1
+          fi
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      
+  # This job builds the release tarball and publishes it to GitHub Releases 
+  release:
+    # Specifies the environment for this job (if you have environments configured)
+    environment: release
+    # This job runs on the latest Ubuntu environment
+    runs-on: ubuntu-latest
+    needs: [check-tag]
+    container:
+      image: node:20
+    steps:
+      # Checks out the repository code at the specific tag that triggered the workflow
+      - name: Checkout the main branch
+        uses: actions/checkout@v4
+      - name: Install Dependencies
+        run: |
+          apt-get update
+          apt-get install -y build-essential g++ libx11-dev libxkbfile-dev libsecret-1-dev libkrb5-dev python-is-python3 quilt
+      # Builds the tarball
+      - name: Build Tarball
+        id: build
+        run: |
+          # Configure git safe directory for operations within the workspace
+          git config --global --add safe.directory /__w/sagemaker-code-editor/sagemaker-code-editor
+          
+          # Run the install script to build the tarball, passing the version
+          sh ./scripts/install.sh -t ${{ needs.check-tag.outputs.version }}
+          
+          # Define the tarball name based on the version
+          TARBALL_NAME="code-editor${{ needs.check-tag.outputs.version }}.tar.gz"
+          # Set the tarball name as an output variable
+          echo "tarball_name=${TARBALL_NAME}" >> $GITHUB_OUTPUT
+          
+          # Calculate the SHA256 hash of the tarball
+          SHA256_HASH=$(sha256sum ${TARBALL_NAME} | awk '{ print $1 }')
+          # Set the SHA256 hash as an output variable
+          echo "sha256_hash=${SHA256_HASH}" >> $GITHUB_OUTPUT
+      # Publishes the release to GitHub Releases
+      - name: Publish Release
+        id: publish # Assign an ID to this step to reference its outputs
+        uses: softprops/action-gh-release@v2.2.2 # Caution: Due to recent update of action-gh-release, it now requires node24. So here we still used the previous version v2.2.2
+        with:
+          # Name of the release (e.g., "Code Editor x.y.z")
+          name: Code Editor ${{ needs.check-tag.outputs.version }}
+          # Tag name for the release (e.g., "vx.y.z")
+          tag_name: v${{ needs.check-tag.outputs.version }}
+          # Files to upload as release assets
+          files: |
+            ${{ steps.build.outputs.tarball_name }}
+    # Define outputs for this job
+    outputs:
+      sha256_hash: ${{ steps.build.outputs.sha256_hash }}
+      assets: ${{ steps.publish.outputs.assets }}
+
+  # This job updates the feedstock repository
+  update-feedstock-files:
+    runs-on: ubuntu-latest
+    # This job depends on the successful completion of 'check-tag' and 'release' jobs
+    needs: [check-tag, release]
+    steps:
+      # Clones the feedstock repository (your fork)
+      - name: Clone the feedstock repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'harvenstar/sagemaker-code-editor-feedstock'
+          ref: 'dev'
+          token: ${{ secrets.PERSONAL_TOKEN }}
+
+      - name: Create and checkout dynamic update branch
+        id: create_branch # Assign an ID to this step to reference its outputs
+        run: |
+          # Generate a unique branch name using the version (e.g., "auto-update-v1.2.0")
+          # This prevents conflicts with pre-existing branches from previous runs.
+          NEW_BRANCH_NAME="auto-update-v${{ needs.check-tag.outputs.version }}"
+
+          git checkout -b ${NEW_BRANCH_NAME}
+          echo "Created and switched to new branch: ${NEW_BRANCH_NAME}"
+          
+          # Output the new branch name for use in later steps (e.g., creating the PR)
+          echo "branch_name=${NEW_BRANCH_NAME}" >> $GITHUB_OUTPUT
+
+      # Updates the meta.yaml file in the cloned feedstock repository
+            # Updates the meta.yaml file in the cloned feedstock repository
+      - name: Update meta.yaml
+        run: |
+          # Get the version from the 'check-tag' job's output
+          VERSION=${{ needs.check-tag.outputs.version }}
+
+          sed -i "s/{% set version = \".*\" %}/{% set version = \"$VERSION\" %}/" recipe/meta.yaml
+
+          URL="${{ fromJSON(needs.release.outputs.assets)[0].browser_download_url }}"
+          sed -i "s|url: .*\.tar\.gz|url: $URL|" recipe/meta.yaml
+
+          SHA256=${{ needs.release.outputs.sha256_hash }}
+          sed -i "s|sha256: [0-9a-f]*|sha256: $SHA256|" recipe/meta.yaml
+
+      # Displays the differences in meta.yaml after modifications for verification
+      - name: Show changes in meta.yaml
+        run: git diff recipe/meta.yaml
+      
+      # Commits the changes to meta.yaml and pushes them to the dynamic branch in your feedstock fork
+      - name: Commit and push changes
+        # This step commits the modified 'recipe/meta.yaml' file and pushes it to the remote feedstock repository.
+        # - Git user name and email are configured for the commit.
+        # - 'git add' stages the changes.
+        # - 'git commit' creates a commit with a message including the new version.
+        #   ' || echo "No changes to commit." ' prevents the workflow from failing if there are no changes (e.g., if re-running on same version with no actual file change).
+        # - The current local branch (which is the dynamic branch, e.g., 'auto-update-vX.Y.Z') is pushed to the 'origin' remote.
+        #   This creates the branch on the remote if it doesn't exist.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add recipe/meta.yaml
+
+          # Check if there are changes to commit to avoid error if meta.yaml is already up-to-date
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update recipe to v${{ needs.check-tag.outputs.version }}"
+          fi
+
+          # Get the current branch name (should be the dynamic one created earlier)
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Pushing changes to origin/${CURRENT_BRANCH}"
+          # Push the dynamic branch to your feedstock fork (origin)
+          # The '-u' flag sets the upstream branch for future pushes/pulls from this local branch.
+          git push -u origin ${CURRENT_BRANCH}
+
+      
+          # labels: automated-update, bot
+          # assignees: harvenstar
+          # reviewers: harvenstar
+

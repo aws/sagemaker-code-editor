@@ -30,6 +30,7 @@ import { URI } from 'vs/base/common/uri';
 import { streamToBuffer } from 'vs/base/common/buffer';
 import { IProductConfiguration } from 'vs/base/common/product';
 import { isString } from 'vs/base/common/types';
+import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
 import { CharCode } from 'vs/base/common/charCode';
 import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
 
@@ -330,14 +331,7 @@ export class WebClientServer {
 		const productConfiguration = {
 			rootEndpoint: base,
 			embedderIdentifier: 'server-distro',
-			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
-				...this._productService.extensionsGallery,
-				resourceUrlTemplate: this._webExtensionResourceUrlTemplate.with({
-					scheme: 'http',
-					authority: remoteAuthority,
-					path: `${this._webExtensionRoute}/${this._webExtensionResourceUrlTemplate.authority}${this._webExtensionResourceUrlTemplate.path}`
-				}).toString(true)
-			} : undefined
+			extensionsGallery: this._productService.extensionsGallery,
 		} satisfies Partial<IProductConfiguration>;
 
 		if (!this._environmentService.isBuilt) {
@@ -362,6 +356,8 @@ export class WebClientServer {
 			callbackRoute: this._callbackRoute
 		};
 
+		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource.fsPath);
+		const nlsConfiguration = await getNLSConfiguration(locale, this._environmentService.userDataPath)
 		const nlsBaseUrl = this._productService.extensionsGallery?.nlsBaseUrl;
 		const values: { [key: string]: string } = {
 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
@@ -370,6 +366,7 @@ export class WebClientServer {
 			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
 			BASE: base,
 			VS_BASE: vscodeBase,
+			NLS_CONFIGURATION: asJSON(nlsConfiguration),
 		};
 
 		if (useTestResolver) {
@@ -401,7 +398,7 @@ export class WebClientServer {
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
 			'style-src \'self\' \'unsafe-inline\';',
-			'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;',
+			'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://openvsxorg.blob.core.windows.net https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;',
 			'font-src \'self\' blob:;',
 			'manifest-src \'self\';'
 		].join(' ');
@@ -470,7 +467,7 @@ export class WebClientServer {
 	}
 
 	/**
-	 * Handles API requests to retrieve the last activity timestamp.
+ 	 * Handles API requests to retrieve the last activity timestamp.
    */
 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 		try {
@@ -494,40 +491,40 @@ export class WebClientServer {
 		}
 	}
 
-	/**
-	 * Handles API requests to run the post-startup script in SMD.
-	 */
-	private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-		const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
-		const logPath = '/var/log/apps/post_startup_default.log';
-		const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+    /**
+     * Handles API requests to run the post-startup script in SMD.
+     */
+    private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+        const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
+        const logPath = '/var/log/apps/post_startup_default.log';
+        const logStream = fs.createWriteStream(logPath, { flags: 'a' });
 
-		// Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
-		if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {
-			return serveError(req, res, 403, 'Forbidden');
-		} else {
-			//If postStartupScriptFile doesn't exist, it will throw FileNotFoundError (404)
-			//If exists, it will start the execution and add the execution logs in logFile.
-			try {
-				if (fs.existsSync(postStartupScriptPath)) {
-					// Adding 0o755 to make script file executable
-					fs.chmodSync(postStartupScriptPath, 0o755);
+        // Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
+        if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {
+            return serveError(req, res, 403, 'Forbidden');
+        } else {
+            //If postStartupScriptFile doesn't exist, it will throw FileNotFoundError (404)
+            //If exists, it will start the execution and add the execution logs in logFile.
+            try {
+                if (fs.existsSync(postStartupScriptPath)) {
+                    // Adding 0o755 to make script file executable
+                    fs.chmodSync(postStartupScriptPath, 0o755);
 
-					const subprocess = spawn('bash', [`${postStartupScriptPath}`], { cwd: '/' });
-					subprocess.stdout.pipe(logStream);
-					subprocess.stderr.pipe(logStream);
+                    const subprocess = spawn('bash', [`${postStartupScriptPath}`], { cwd: '/' });
+                    subprocess.stdout.pipe(logStream);
+                    subprocess.stderr.pipe(logStream);
 
-					res.statusCode = 200;
-					res.setHeader('Content-Type', 'application/json');
-					res.end(JSON.stringify({ 'success': 'true' }));
-				} else {
-					serveError(req, res, 500, 'Poststartup script file not found at ' + postStartupScriptPath);
-				}
-			} catch (error) {
-				serveError(req, res, 500, error.message);
-			}
-		}
-	}
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ 'success': 'true' }));
+                } else {
+                    serveError(req, res, 500, 'Poststartup script file not found at ' + postStartupScriptPath);
+                }
+            } catch (error) {
+                serveError(req, res, 500, error.message);
+            }
+        }
+    }
 }
 
 /**

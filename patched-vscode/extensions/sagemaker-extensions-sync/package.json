@@ -1,0 +1,44 @@
+{
+  "name": "sagemaker-extensions-sync",
+  "displayName": "SageMaker Extensions Sync",
+  "description": "Sync pre-packaged extensions from SageMaker Distribution",
+  "extensionKind": [
+    "workspace"
+  ],
+  "version": "1.0.0",
+  "publisher": "sagemaker",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "main": "./out/extension",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "contributes": {
+		"commands": [
+			{
+				"command": "extensions-sync.syncExtensions",
+				"title": "Sync Extensions from SageMaker Distribution",
+				"category": "Extensions Sync"
+			}
+		]
+	},
+  "scripts": {
+    "compile": "gulp compile-extension:sagemaker-extensions-sync",
+    "watch": "npm run build-preview && gulp watch-extension:sagemaker-extensions-sync",
+    "vscode:prepublish": "npm run build-ext",
+    "build-ext": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:sagemaker-idle-extension ./tsconfig.json"
+  },
+  "dependencies": {},
+  "repository": {}
+}

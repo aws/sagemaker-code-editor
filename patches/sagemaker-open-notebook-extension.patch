@@ -162,7 +162,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-open-notebook-extension/src/extension.ts
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,100 @@
 +
 +import * as vscode from 'vscode';
 +import * as https from 'https';

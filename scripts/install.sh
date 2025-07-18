@@ -73,16 +73,16 @@ sh ${PROJ_ROOT}/scripts/postinstall.sh
 printf "\n======== Deleting vscode/node_modules ========\n"
 find "${PROJ_ROOT}/vscode" -name "node_modules" -type d -prune -exec rm -rf '{}' +
 
+# Copy resources
+printf "\n======== Copy resources ========\n"
+${PROJ_ROOT}/scripts/copy-resources.sh
+
 # Create tarball
 if [ "$CREATE_TARBALL" = true ]; then
   # Build tarball for conda feedstock from vscode dir
   printf "\n======== Build Tarball for Conda Feedstock ========\n"
   bash ${PROJ_ROOT}/scripts/create_code_editor_tarball.sh -v ${VERSION}
 fi
-
-# Copy resources
-printf "\n======== Copy resources ========\n"
-${PROJ_ROOT}/scripts/copy-resources.sh
 
 # Copy patched files to patches-vscode
 cp -R vscode/* patched-vscode/
