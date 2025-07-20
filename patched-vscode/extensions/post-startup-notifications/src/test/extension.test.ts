@@ -26,12 +26,6 @@ jest.mock('vscode', () => ({
     }
 }));
 
-// Simple mock for localStorage
-global.localStorage = {
-    getItem: jest.fn(),
-    setItem: jest.fn(),
-} as any;
-
 jest.mock('fs');
 jest.mock('chokidar');
 
@@ -44,8 +38,15 @@ describe('SageMaker Unified Studio Extension Tests', () => {
         // Reset mocks
         jest.resetAllMocks();
 
-        // Setup context
-        mockContext = { subscriptions: [] } as any;
+        // Setup context with globalState for storage
+        mockContext = { 
+            subscriptions: [],
+            globalState: {
+                get: jest.fn(),
+                update: jest.fn(),
+                keys: jest.fn().mockReturnValue([])
+            }
+        } as any;
 
         // Setup watcher
         mockWatcher = {
@@ -203,8 +204,8 @@ describe('SageMaker Unified Studio Extension Tests', () => {
 
     describe('Q CLI Notification Tests', () => {
         test('should show Q CLI notification with Learn More button', () => {
-            // Set up localStorage to simulate first-time user
-            (localStorage.getItem as jest.Mock).mockReturnValue(null);
+            // Set up globalState to simulate first-time user
+            (mockContext.globalState.get as jest.Mock).mockReturnValue(undefined);
             
             activate(mockContext);
             
@@ -217,8 +218,8 @@ describe('SageMaker Unified Studio Extension Tests', () => {
         });
         
         test('should open documentation when Learn More is clicked', async () => {
-            // Set up localStorage to simulate first-time user
-            (localStorage.getItem as jest.Mock).mockReturnValue(null);
+            // Set up globalState to simulate first-time user
+            (mockContext.globalState.get as jest.Mock).mockReturnValue(undefined);
             
             // Mock the user clicking "Learn More"
             const mockSelection = { title: 'Learn More' };
@@ -235,6 +236,22 @@ describe('SageMaker Unified Studio Extension Tests', () => {
                     toString: expect.any(Function)
                 })
             );
+            
+            // Verify notification is marked as seen
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'notification_seen_smus_q_cli_notification', 
+                true
+            );
+        });
+        
+        test('should not show notification if already seen', () => {
+            // Set up globalState to simulate returning user who has seen notification
+            (mockContext.globalState.get as jest.Mock).mockReturnValue(true);
+            
+            activate(mockContext);
+            
+            // Verify notification is not shown again
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         });
     });
     

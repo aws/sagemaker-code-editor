@@ -4,17 +4,14 @@ import { POST_START_UP_STATUS_FILE, SERVICE_NAME_ENV_KEY, SERVICE_NAME_ENV_VALUE
 import { StatusFile } from './types';
 import * as chokidar from 'chokidar';
 
-// TypeScript declaration for localStorage in browser environment
-declare const localStorage: Storage;
-
 // Simple method to check if user has seen a notification
-function hasUserSeen(notificationId: string): boolean {
-  return localStorage.getItem(`notification_seen_${notificationId}`) === 'true';
+function hasUserSeen(context: vscode.ExtensionContext, notificationId: string): boolean {
+  return context.globalState.get(`notification_seen_${notificationId}`) === true;
 }
 
 // Simple method to mark notification as seen
-function markAsSeen(notificationId: string): void {
-  localStorage.setItem(`notification_seen_${notificationId}`, 'true');
+function markAsSeen(context: vscode.ExtensionContext, notificationId: string): void {
+  context.globalState.update(`notification_seen_${notificationId}`, true);
 }
 
 let previousStatus: string | undefined;
@@ -32,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel = vscode.window.createOutputChannel('SageMaker Unified Studio Post Startup Notifications');
     
     // Show Q CLI notification if user hasn't seen it before
-    showQCliNotification();
+    showQCliNotification(context);
 
     try {
         watcher = chokidar.watch(POST_START_UP_STATUS_FILE, {
@@ -85,25 +82,26 @@ function processStatusFile() {
 };
 
 // Show Q CLI notification if user hasn't seen it before
-function showQCliNotification(): void {
+function showQCliNotification(context: vscode.ExtensionContext): void {
     const notificationId = 'smus_q_cli_notification';
     const message = 'The Amazon Q Command Line Interface (CLI) is installed. You can now access AI-powered assistance in your terminal.';
     const link = 'https://docs.aws.amazon.com/sagemaker-unified-studio/latest/userguide/q-actions.html';
     const linkLabel = 'Learn More';
     
-    if (!hasUserSeen(notificationId)) {
+    if (!hasUserSeen(context, notificationId)) {
+        outputChannel.appendLine("User has not seen the notification")
         // Show notification with Learn More button
         vscode.window.showInformationMessage(
             message,
             { modal: false },
             { title: linkLabel, isCloseAffordance: false }
-        ).then((selection: { title: string; }) => {
+        ).then((selection) => {
             if (selection && selection.title === linkLabel) {
                 vscode.env.openExternal(vscode.Uri.parse(link));
             }
             
             // Mark as seen regardless of which button was clicked
-            markAsSeen(notificationId);
+            markAsSeen(context, notificationId);
         });
     }
 }
