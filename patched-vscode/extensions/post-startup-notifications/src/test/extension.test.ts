@@ -15,8 +15,14 @@ interface MockFSWatcher extends chokidar.FSWatcher {
 jest.mock('vscode', () => ({
     window: {
         showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
+        showInformationMessage: jest.fn().mockReturnValue(Promise.resolve()),
         createOutputChannel: jest.fn()
+    },
+    env: {
+        openExternal: jest.fn()
+    },
+    Uri: {
+        parse: jest.fn(url => ({ toString: () => url }))
     }
 }));
 
@@ -32,8 +38,15 @@ describe('SageMaker Unified Studio Extension Tests', () => {
         // Reset mocks
         jest.resetAllMocks();
 
-        // Setup context
-        mockContext = { subscriptions: [] } as any;
+        // Setup context with globalState for storage
+        mockContext = { 
+            subscriptions: [],
+            globalState: {
+                get: jest.fn(),
+                update: jest.fn(),
+                keys: jest.fn().mockReturnValue([])
+            }
+        } as any;
 
         // Setup watcher
         mockWatcher = {
@@ -189,6 +202,59 @@ describe('SageMaker Unified Studio Extension Tests', () => {
         });
     });
 
+    describe('Q CLI Notification Tests', () => {
+        test('should show Q CLI notification with Learn More button', () => {
+            // Set up globalState to simulate first-time user
+            (mockContext.globalState.get as jest.Mock).mockReturnValue(undefined);
+            
+            activate(mockContext);
+            
+            // Verify notification is shown with correct message and button
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                'The Amazon Q Command Line Interface (CLI) is installed. You can now access AI-powered assistance in your terminal.',
+                { modal: false },
+                { title: 'Learn More', isCloseAffordance: false }
+            );
+        });
+        
+        test('should open documentation when Learn More is clicked', async () => {
+            // Set up globalState to simulate first-time user
+            (mockContext.globalState.get as jest.Mock).mockReturnValue(undefined);
+            
+            // Mock the user clicking "Learn More"
+            const mockSelection = { title: 'Learn More' };
+            (vscode.window.showInformationMessage as jest.Mock).mockReturnValue(Promise.resolve(mockSelection));
+            
+            activate(mockContext);
+            
+            // Wait for the promise to resolve
+            await new Promise(process.nextTick);
+            
+            // Verify the documentation link is opened
+            expect(vscode.env.openExternal).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    toString: expect.any(Function)
+                })
+            );
+            
+            // Verify notification is marked as seen
+            expect(mockContext.globalState.update).toHaveBeenCalledWith(
+                'notification_seen_smus_q_cli_notification', 
+                true
+            );
+        });
+        
+        test('should not show notification if already seen', () => {
+            // Set up globalState to simulate returning user who has seen notification
+            (mockContext.globalState.get as jest.Mock).mockReturnValue(true);
+            
+            activate(mockContext);
+            
+            // Verify notification is not shown again
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        });
+    });
+    
     describe('Deactivation Tests', () => {
         test('should cleanup resources properly', () => {
             activate(mockContext);
