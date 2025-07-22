@@ -34,7 +34,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/.vscod
 +        }
 +    ]
 +}
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/.vscode/settings.json
 ===================================================================
 --- /dev/null
@@ -53,7 +53,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/.vscod
 +    // Turn off tsc task auto detection since we have the necessary tasks as npm scripts
 +    "typescript.tsc.autoDetect": "off"
 +}
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/.vscode/tasks.json
 ===================================================================
 --- /dev/null
@@ -99,7 +99,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/.vscod
 +        }
 +    ]
 +}
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/.vscodeignore
 ===================================================================
 --- /dev/null
@@ -176,7 +176,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/eslint
 +        semi: "warn",
 +    },
 +}];
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/package.json
 ===================================================================
 --- /dev/null
@@ -239,7 +239,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/packag
 +        "chokidar": "^4.0.3"
 +    }
 +}
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/constant.ts
 ===================================================================
 --- /dev/null
@@ -248,7 +248,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/co
 +export const POST_START_UP_STATUS_FILE = '/tmp/.post-startup-status.json';
 +export const SERVICE_NAME_ENV_VALUE = 'SageMakerUnifiedStudio';
 +export const SERVICE_NAME_ENV_KEY = 'SERVICE_NAME';
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/extension.ts
 ===================================================================
 --- /dev/null
@@ -371,7 +371,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/ex
 +        outputChannel.dispose();
 +    }
 +}
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/test/extension.test.ts
 ===================================================================
 --- /dev/null
@@ -644,7 +644,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/te
 +        });
 +    });
 +});
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/types.ts
 ===================================================================
 --- /dev/null
@@ -656,7 +656,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/src/ty
 +    link: string;
 +    label: string;
 +}
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/tsconfig.json
 ===================================================================
 --- /dev/null
@@ -679,7 +679,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/tsconf
 +        // "noUnusedParameters": true,  /* Report errors on unused parameters. */
 +    }
 +}
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/webpack.config.js
 ===================================================================
 --- /dev/null
@@ -733,7 +733,7 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/webpac
 +    },
 +};
 +module.exports = [extensionConfig];
-\ No newline at end of file
+\n
 Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
@@ -805,4 +805,4 @@ Index: sagemaker-code-editor/vscode/extensions/post-startup-notifications/extens
 +        extension: './src/extension.ts',
 +    }
 +});
-\ No newline at end of file
+\n
