@@ -74,7 +74,7 @@ jobs:
           sh ./scripts/install.sh -t ${{ needs.check-tag.outputs.version }}
           
           # Define the tarball name based on the version
-          TARBALL_NAME="code-editorv${{ needs.check-tag.outputs.version }}.tar.gz"
+          TARBALL_NAME="code-editor-v${{ needs.check-tag.outputs.version }}.tar.gz"
           # Set the tarball name as an output variable
           echo "tarball_name=${TARBALL_NAME}" >> $GITHUB_OUTPUT
           
