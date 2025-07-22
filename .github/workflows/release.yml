@@ -74,7 +74,7 @@ jobs:
           sh ./scripts/install.sh -t ${{ needs.check-tag.outputs.version }}
           
           # Define the tarball name based on the version
-          TARBALL_NAME="code-editor${{ needs.check-tag.outputs.version }}.tar.gz"
+          TARBALL_NAME="code-editorv${{ needs.check-tag.outputs.version }}.tar.gz"
           # Set the tarball name as an output variable
           echo "tarball_name=${TARBALL_NAME}" >> $GITHUB_OUTPUT
           
@@ -99,81 +99,4 @@ jobs:
       sha256_hash: ${{ steps.build.outputs.sha256_hash }}
       assets: ${{ steps.publish.outputs.assets }}
 
-  # This job updates the feedstock repository
-  update-feedstock-files:
-    runs-on: ubuntu-latest
-    # This job depends on the successful completion of 'check-tag' and 'release' jobs
-    needs: [check-tag, release]
-    steps:
-      # Clones the feedstock repository (your fork)
-      - name: Clone the feedstock repository
-        uses: actions/checkout@v4
-        with:
-          repository: 'harvenstar/sagemaker-code-editor-feedstock'
-          ref: 'dev'
-          token: ${{ secrets.PERSONAL_TOKEN }}
-
-      - name: Create and checkout dynamic update branch
-        id: create_branch # Assign an ID to this step to reference its outputs
-        run: |
-          # Generate a unique branch name using the version (e.g., "auto-update-v1.2.0")
-          # This prevents conflicts with pre-existing branches from previous runs.
-          NEW_BRANCH_NAME="auto-update-v${{ needs.check-tag.outputs.version }}"
-
-          git checkout -b ${NEW_BRANCH_NAME}
-          echo "Created and switched to new branch: ${NEW_BRANCH_NAME}"
-          
-          # Output the new branch name for use in later steps (e.g., creating the PR)
-          echo "branch_name=${NEW_BRANCH_NAME}" >> $GITHUB_OUTPUT
-
-      # Updates the meta.yaml file in the cloned feedstock repository
-            # Updates the meta.yaml file in the cloned feedstock repository
-      - name: Update meta.yaml
-        run: |
-          # Get the version from the 'check-tag' job's output
-          VERSION=${{ needs.check-tag.outputs.version }}
-
-          sed -i "s/{% set version = \".*\" %}/{% set version = \"$VERSION\" %}/" recipe/meta.yaml
-
-          URL="${{ fromJSON(needs.release.outputs.assets)[0].browser_download_url }}"
-          sed -i "s|url: .*\.tar\.gz|url: $URL|" recipe/meta.yaml
-
-          SHA256=${{ needs.release.outputs.sha256_hash }}
-          sed -i "s|sha256: [0-9a-f]*|sha256: $SHA256|" recipe/meta.yaml
-
-      # Displays the differences in meta.yaml after modifications for verification
-      - name: Show changes in meta.yaml
-        run: git diff recipe/meta.yaml
-      
-      # Commits the changes to meta.yaml and pushes them to the dynamic branch in your feedstock fork
-      - name: Commit and push changes
-        # This step commits the modified 'recipe/meta.yaml' file and pushes it to the remote feedstock repository.
-        # - Git user name and email are configured for the commit.
-        # - 'git add' stages the changes.
-        # - 'git commit' creates a commit with a message including the new version.
-        #   ' || echo "No changes to commit." ' prevents the workflow from failing if there are no changes (e.g., if re-running on same version with no actual file change).
-        # - The current local branch (which is the dynamic branch, e.g., 'auto-update-vX.Y.Z') is pushed to the 'origin' remote.
-        #   This creates the branch on the remote if it doesn't exist.
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add recipe/meta.yaml
-
-          # Check if there are changes to commit to avoid error if meta.yaml is already up-to-date
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Update recipe to v${{ needs.check-tag.outputs.version }}"
-          fi
-
-          # Get the current branch name (should be the dynamic one created earlier)
-          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          echo "Pushing changes to origin/${CURRENT_BRANCH}"
-          # Push the dynamic branch to your feedstock fork (origin)
-          # The '-u' flag sets the upstream branch for future pushes/pulls from this local branch.
-          git push -u origin ${CURRENT_BRANCH}
-
-      
-          # labels: automated-update, bot
-          # assignees: harvenstar
-          # reviewers: harvenstar
+ 
