@@ -1,0 +1,114 @@
+# Workflow name
+name: Build sagemaker-code-editor and Generate Artifact
+
+
+
+# This workflow is triggered on pushes and pull requests.
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+# Concurrency settings to cancel in-progress runs for the same PR or branch
+# This prevents wasting resources on outdated commits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The main job for building the application
+  build:
+    name: Build sagemaker-code-editor
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      # Environment variable to optimize the build process
+      DISABLE_V8_COMPILE_CACHE: 1
+
+    steps:
+      # Step 1: Check out the repository code, including its submodules.
+      - name: Checkout repo with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Step 2: Install system-level dependencies required for the build.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make gcc g++ libx11-dev xorg-dev libxkbfile-dev libsecret-1-dev libkrb5-dev python3 jq perl gettext automake autoconf quilt
+      # Step 3: Set up the Node.js environment. Version 20 is specified.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Step 4: Cache Node.js modules to speed up subsequent builds.
+      # The cache is invalidated if the lock file changes.
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            vscode/node_modules
+          key: ${{ runner.os }}-node20-${{ hashFiles('vscode/package.json', 'vscode/yarn.lock') }}
+
+      # Step 5: Apply patches from the 'patches' directory if it exists.
+      - name: Apply patches (if any)
+        run: |
+          if [ -d patches ] && [ "$(ls -A patches)" ]; then
+            quilt push -a || true
+          fi
+      # Step 6: Generate a version string for this specific build.
+      # It's based on the commit SHA to create a unique identifier.
+      - name: Set Development Version
+        id: version
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          VERSION="0.0.0-dev-${SHORT_SHA}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Generated version for this build: $VERSION"
+      # Step 7: The main build process for vscode.
+      - name: Build vscode
+        run: |
+          cd vscode
+          export DISABLE_V8_COMPILE_CACHE=1
+          export UV_THREADPOOL_SIZE=4
+          npm i -g node-gyp
+          yarn install --network-concurrency 1
+          VSCODE_RIPGREP_VERSION=$(jq -r '.dependencies."@vscode/ripgrep"' package.json)
+          mv package.json package.json.orig
+          jq 'del(.dependencies."@vscode/ripgrep")' package.json.orig > package.json
+          yarn install
+          yarn add --ignore-scripts "@vscode/ripgrep@${VSCODE_RIPGREP_VERSION}"
+          ARCH_ALIAS=linux-x64
+          yarn gulp vscode-reh-web-${ARCH_ALIAS}-min
+      # Step 8: Find the exact path of the build output directory.
+      - name: Find build output
+        id: find_output
+        run: |
+          BUILD_PATH=$(find . -name "vscode-reh-web-linux-x64" -type d | head -n 1)
+          if [ -z "$BUILD_PATH" ]; then
+            echo "::error::Build output directory 'vscode-reh-web-linux-x64' not found!"
+            exit 1
+          fi
+          echo "Build output found at: $BUILD_PATH"
+          echo "build_path=$BUILD_PATH" >> $GITHUB_OUTPUT
+      # Step 9: Create a compressed tarball of the build output.
+      - name: Create tarball archive
+        run: |
+          TARBALL="vscode-reh-web-linux-x64-${{ env.VERSION }}.tar.gz"
+          BUILD_DIR_PATH="${{ steps.find_output.outputs.build_path }}"
+          PARENT_DIR=$(dirname "$BUILD_DIR_PATH")
+          BUILD_DIR_NAME=$(basename "$BUILD_DIR_PATH")
+          echo "Creating '$TARBALL' from '$BUILD_DIR_NAME' in '$PARENT_DIR'"
+          tar czf $TARBALL -C "$PARENT_DIR" "$BUILD_DIR_NAME"
+      # Step 10: Upload the tarball as a build artifact.
+      # This allows you to download the result from the workflow run summary page.
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-reh-web-linux-x64-${{ env.VERSION }}
+          path: vscode-reh-web-linux-x64-${{ env.VERSION }}.tar.gz
