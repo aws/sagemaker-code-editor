@@ -98,7 +98,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -320,14 +320,7 @@ export class WebClientServer {
+@@ -331,14 +331,7 @@ export class WebClientServer {
  		const productConfiguration = {
  			rootEndpoint: base,
  			embedderIdentifier: 'server-distro',
@@ -134,3 +134,28 @@ Index: sagemaker-code-editor/vscode/product.json
  	"linkProtectionTrustedDomains": [
  		"https://open-vsx.org"
  	]
+Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
++++ sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
+@@ -16,7 +16,6 @@ import { getServiceMachineId } from 'vs/
+ import { IStorageService } from 'vs/platform/storage/common/storage';
+ import { TelemetryLevel } from 'vs/platform/telemetry/common/telemetry';
+ import { getTelemetryLevel, supportsTelemetry } from 'vs/platform/telemetry/common/telemetryUtils';
+-import { RemoteAuthorities } from 'vs/base/common/network';
+ import { TargetPlatform } from 'vs/platform/extensions/common/extensions';
+ 
+ const WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT = '/web-extension-resource/';
+@@ -141,9 +140,9 @@ export abstract class AbstractExtensionR
+ 	}
+ 
+ 	protected _isWebExtensionResourceEndPoint(uri: URI): boolean {
+-		const uriPath = uri.path, serverRootPath = RemoteAuthorities.getServerRootPath();
+-		// test if the path starts with the server root path followed by the web extension resource end point segment
+-		return uriPath.startsWith(serverRootPath) && uriPath.startsWith(WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT, serverRootPath.length);
++		const uriPath = uri.path;
++		// test if the path starts with the web extension resource end point segment
++		return uriPath.startsWith(WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT);
+ 	}
+ 
+ }
