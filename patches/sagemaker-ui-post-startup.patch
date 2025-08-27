@@ -2,7 +2,15 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -40,6 +40,10 @@ const textMimeType: { [ext: string]: str
+@@ -6,6 +6,7 @@
+ import { createReadStream, existsSync, writeFileSync } from 'fs';
+ import {readFile } from 'fs/promises';
+ import { Promises } from 'vs/base/node/pfs';
++import { spawn } from 'child_process';
+ import * as fs from 'fs';
+ import * as path from 'path';
+ import * as http from 'http';
+@@ -40,6 +41,10 @@ const textMimeType: { [ext: string]: str
  	'.svg': 'image/svg+xml',
  };
  
@@ -13,7 +21,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  /**
   * Return an error to the client.
   */
-@@ -142,6 +146,7 @@ export class WebClientServer {
+@@ -142,6 +147,7 @@ export class WebClientServer {
  	private readonly _callbackRoute: string;
  	private readonly _webExtensionRoute: string;
  	private readonly _idleRoute: string;
@@ -21,7 +29,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  	constructor(
  		private readonly _connectionToken: ServerConnectionToken,
-@@ -158,6 +163,7 @@ export class WebClientServer {
+@@ -158,6 +164,7 @@ export class WebClientServer {
  		this._callbackRoute = `${serverRootPath}/callback`;
  		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
  		this._idleRoute = '/api/idle';
@@ -29,7 +37,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  	}
  
  	/**
-@@ -186,6 +192,9 @@ export class WebClientServer {
+@@ -186,6 +193,9 @@ export class WebClientServer {
  				// extension resource support
  				return this._handleWebExtensionResource(req, res, parsedUrl);
  			}
@@ -39,7 +47,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  			return serveError(req, res, 404, 'Not found.');
  		} catch (error) {
-@@ -524,6 +533,41 @@ export class WebClientServer {
+@@ -524,6 +534,41 @@ export class WebClientServer {
  			serveError(req, res, 500, error.message)
  		}
  	}
