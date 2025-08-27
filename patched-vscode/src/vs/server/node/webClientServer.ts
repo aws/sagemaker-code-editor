@@ -6,7 +6,6 @@
 import { createReadStream, existsSync, writeFileSync } from 'fs';
 import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
-import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
@@ -99,7 +98,46 @@ export async function serveFile(filePath: string, cacheControl: CacheControl, lo
 	}
 }
 
+const CHECK_INTERVAL = 60000; // 60 seconds interval
 const APP_ROOT = dirname(FileAccess.asFileUri('').fsPath);
+
+/**
+ * Checks for terminal activity by reading the /dev/pts directory and comparing modification times of the files.
+ *
+ * The /dev/pts directory is used in Unix-like operating systems to represent pseudo-terminal (PTY) devices.
+ * Each active terminal session is assigned a PTY device. These devices are represented as files within the /dev/pts directory.
+ * When a terminal session has activity, such as when a user inputs commands or output is written to the terminal,
+ * the modification time (mtime) of the corresponding PTY device file is updated. By monitoring the modification
+ * times of the files in the /dev/pts directory, we can detect terminal activity.
+ *
+ * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
+ * updates the last activity timestamp.
+ */
+const checkTerminalActivity = (idleFilePath: string) => {
+	fs.readdir('/dev/pts', (err, files) => {
+		if (err) {
+			console.error('Error reading /dev/pts directory:', err);
+			return;
+		}
+
+		const now = new Date();
+		const activityDetected = files.some((file) => {
+			const filePath = path.join('/dev/pts', file);
+			try {
+				const stats = fs.statSync(filePath);
+				const mtime = new Date(stats.mtime).getTime();
+				return now.getTime() - mtime < CHECK_INTERVAL;
+			} catch (error) {
+				console.error('Error reading file stats:', error);
+				return false;
+			}
+		});
+
+		if (activityDetected) {
+			fs.writeFileSync(idleFilePath, now.toISOString());
+		}
+	});
+};
 
 export class WebClientServer {
 
@@ -480,6 +518,8 @@ export class WebClientServer {
 				const timestamp = new Date().toISOString();
 				writeFileSync(idleFilePath, timestamp);
 			}
+
+			checkTerminalActivity(idleFilePath);
 
 			const data = await readFile(idleFilePath, 'utf8');
 
