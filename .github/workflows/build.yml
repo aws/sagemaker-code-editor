@@ -84,7 +84,8 @@ jobs:
       - name: Apply patches (if any)
         run: |
           if [ -d patches ] && [ "$(ls -A patches)" ]; then
-            quilt push -a || true
+            set -e
+            quilt push -a
           fi
 
       # Step 5: Generate a version string for this specific build.
