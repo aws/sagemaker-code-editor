@@ -6,7 +6,7 @@
 import { createReadStream, existsSync, writeFileSync } from 'fs';
 import {readFile } from 'fs/promises';
 import { Promises } from 'vs/base/node/pfs';
-+import { spawn } from 'child_process';
+import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as http from 'http';
