@@ -147,27 +147,19 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/extension.ts
-@@ -0,0 +1,112 @@
+@@ -0,0 +1,58 @@
 +import * as vscode from "vscode";
 +import * as fs from "fs";
 +import * as path from "path";
 +
-+let idleFilePath: string
-+let terminalActivityInterval: NodeJS.Timeout | undefined
-+const LOG_PREFIX = "[sagemaker-idle-extension]"
-+const CHECK_INTERVAL = 60000; // 60 seconds interval
++let idleFilePath: string;
 +
 +export function activate(context: vscode.ExtensionContext) {
 +	initializeIdleFilePath();
 +	registerEventListeners(context);
-+	startMonitoringTerminalActivity();
 +}
 +
-+export function deactivate() {
-+	if(terminalActivityInterval) {
-+		clearInterval(terminalActivityInterval)
-+	}
-+}
++export function deactivate() {}
 +
 +/**
 + * Initializes the file path where the idle timestamp will be stored.
@@ -178,7 +170,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +	idleFilePath = path.join(tmpDirectory, ".sagemaker-last-active-timestamp");
 +
 +	// Set initial lastActivetimestamp
-+	updateLastActivityTimestamp()
++	updateLastActivityTimestamp();
 +}
 +
 +/**
@@ -205,52 +197,6 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +		})
 +	);
 +}
-+
-+/**
-+ * Starts monitoring terminal activity by setting an interval to check for activity in the /dev/pts directory.
-+ */
-+const startMonitoringTerminalActivity = () => {
-+	terminalActivityInterval = setInterval(checkTerminalActivity, CHECK_INTERVAL);
-+};
-+
-+
-+/**
-+ * Checks for terminal activity by reading the /dev/pts directory and comparing modification times of the files.
-+ *
-+ * The /dev/pts directory is used in Unix-like operating systems to represent pseudo-terminal (PTY) devices.
-+ * Each active terminal session is assigned a PTY device. These devices are represented as files within the /dev/pts directory.
-+ * When a terminal session has activity, such as when a user inputs commands or output is written to the terminal,
-+ * the modification time (mtime) of the corresponding PTY device file is updated. By monitoring the modification
-+ * times of the files in the /dev/pts directory, we can detect terminal activity.
-+ *
-+ * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
-+ * updates the last activity timestamp.
-+ */
-+const checkTerminalActivity = () => {
-+	fs.readdir("/dev/pts", (err, files) => {
-+		if (err) {
-+			console.error(`${LOG_PREFIX} Error reading /dev/pts directory:`, err);
-+			return;
-+		}
-+
-+		const now = Date.now();
-+		const activityDetected = files.some((file) => {
-+			const filePath = path.join("/dev/pts", file);
-+			try {
-+				const stats = fs.statSync(filePath);
-+				const mtime = new Date(stats.mtime).getTime();
-+				return now - mtime < CHECK_INTERVAL;
-+			} catch (error) {
-+				console.error(`${LOG_PREFIX} Error reading file stats:`, error);
-+				return false;
-+			}
-+		});
-+
-+		if (activityDetected) {
-+			updateLastActivityTimestamp();
-+		}
-+	});
-+};
 +
 +/**
 + * Updates the last activity timestamp by recording the current timestamp in the idle file and
@@ -289,7 +235,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -3,7 +3,8 @@
+@@ -3,8 +3,10 @@
   *  Licensed under the MIT License. See License.txt in the project root for license information.
   *--------------------------------------------------------------------------------------------*/
  
@@ -297,9 +243,59 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 +import { createReadStream, existsSync, writeFileSync } from 'fs';
 +import {readFile } from 'fs/promises';
  import { Promises } from 'vs/base/node/pfs';
++import * as fs from 'fs';
  import * as path from 'path';
  import * as http from 'http';
-@@ -100,6 +101,7 @@ export class WebClientServer {
+ import * as url from 'url';
+@@ -91,8 +93,47 @@ export async function serveFile(filePath
+ 	}
+ }
+ 
++const CHECK_INTERVAL = 60000; // 60 seconds interval
+ const APP_ROOT = dirname(FileAccess.asFileUri('').fsPath);
+ 
++/**
++ * Checks for terminal activity by reading the /dev/pts directory and comparing modification times of the files.
++ *
++ * The /dev/pts directory is used in Unix-like operating systems to represent pseudo-terminal (PTY) devices.
++ * Each active terminal session is assigned a PTY device. These devices are represented as files within the /dev/pts directory.
++ * When a terminal session has activity, such as when a user inputs commands or output is written to the terminal,
++ * the modification time (mtime) of the corresponding PTY device file is updated. By monitoring the modification
++ * times of the files in the /dev/pts directory, we can detect terminal activity.
++ *
++ * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
++ * updates the last activity timestamp.
++ */
++const checkTerminalActivity = (idleFilePath: string) => {
++	fs.readdir('/dev/pts', (err, files) => {
++		if (err) {
++			console.error('Error reading /dev/pts directory:', err);
++			return;
++		}
++
++		const now = new Date();
++		const activityDetected = files.some((file) => {
++			const filePath = path.join('/dev/pts', file);
++			try {
++				const stats = fs.statSync(filePath);
++				const mtime = new Date(stats.mtime).getTime();
++				return now.getTime() - mtime < CHECK_INTERVAL;
++			} catch (error) {
++				console.error('Error reading file stats:', error);
++				return false;
++			}
++		});
++
++		if (activityDetected) {
++			fs.writeFileSync(idleFilePath, now.toISOString());
++		}
++	});
++};
++
+ export class WebClientServer {
+ 
+ 	private readonly _webExtensionResourceUrlTemplate: URI | undefined;
+@@ -100,6 +141,7 @@ export class WebClientServer {
  	private readonly _staticRoute: string;
  	private readonly _callbackRoute: string;
  	private readonly _webExtensionRoute: string;
@@ -307,7 +303,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  	constructor(
  		private readonly _connectionToken: ServerConnectionToken,
-@@ -115,6 +117,7 @@ export class WebClientServer {
+@@ -115,6 +157,7 @@ export class WebClientServer {
  		this._staticRoute = `${serverRootPath}/static`;
  		this._callbackRoute = `${serverRootPath}/callback`;
  		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
@@ -315,7 +311,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  	}
  
  	/**
-@@ -132,6 +135,9 @@ export class WebClientServer {
+@@ -132,6 +175,9 @@ export class WebClientServer {
  			if (pathname === this._basePath) {
  				return this._handleRoot(req, res, parsedUrl);
  			}
@@ -325,7 +321,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  			if (pathname === this._callbackRoute) {
  				// callback support
  				return this._handleCallback(res);
-@@ -451,6 +457,31 @@ export class WebClientServer {
+@@ -451,6 +497,33 @@ export class WebClientServer {
  		});
  		return void res.end(data);
  	}
@@ -344,6 +340,8 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 +				const timestamp = new Date().toISOString();
 +				writeFileSync(idleFilePath, timestamp);
 +			}
++
++			checkTerminalActivity(idleFilePath);
 +
 +			const data = await readFile(idleFilePath, 'utf8');
 +
