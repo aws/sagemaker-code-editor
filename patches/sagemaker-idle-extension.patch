@@ -165,7 +165,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 + */
 +function initializeIdleFilePath() {
 +	const tmpDirectory = "/tmp/"; 
-+	idleFilePath = path.join(tmpDirectory, ".sagemaker-last-active-timestamp");
++	idleFilePath = join(tmpDirectory, ".sagemaker-last-active-timestamp");
 +
 +	// Set initial lastActivetimestamp
 +	updateLastActivityTimestamp()
@@ -225,7 +225,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-idle-extension/src/exte
 +
 +		const now = Date.now();
 +		const activityDetected = files.some((file) => {
-+			const filePath = path.join("/dev/pts", file);
++			const filePath = join("/dev/pts", file);
 +			try {
 +				const stats = fs.statSync(filePath);
 +				const mtime = new Date(stats.mtime).getTime();
@@ -317,7 +317,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 + 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
 + 		try {
 + 			const tmpDirectory = '/tmp/'
-+ 			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
++ 			const idleFilePath = join(tmpDirectory, '.sagemaker-last-active-timestamp');
 + 
 + 			// If idle shutdown file does not exist, this indicates the app UI may never been opened
 + 			// Create the initial metadata file
