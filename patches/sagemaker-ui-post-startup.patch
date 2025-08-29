@@ -21,7 +21,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  /**
   * Return an error to the client.
   */
-@@ -142,6 +147,7 @@ export class WebClientServer {
+@@ -136,6 +141,7 @@ export class WebClientServer {
  	private readonly _callbackRoute: string;
  	private readonly _webExtensionRoute: string;
  	private readonly _idleRoute: string;
@@ -29,7 +29,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  	constructor(
  		private readonly _connectionToken: ServerConnectionToken,
-@@ -158,6 +164,7 @@ export class WebClientServer {
+@@ -152,6 +158,7 @@ export class WebClientServer {
  		this._callbackRoute = `${serverRootPath}/callback`;
  		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
  		this._idleRoute = '/api/idle';
@@ -37,7 +37,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  	}
  
  	/**
-@@ -186,6 +193,9 @@ export class WebClientServer {
+@@ -180,6 +187,9 @@ export class WebClientServer {
  				// extension resource support
  				return this._handleWebExtensionResource(req, res, parsedUrl);
  			}
@@ -47,7 +47,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  			return serveError(req, res, 404, 'Not found.');
  		} catch (error) {
-@@ -524,6 +534,41 @@ export class WebClientServer {
+@@ -518,6 +528,41 @@ export class WebClientServer {
  			serveError(req, res, 500, error.message)
  		}
  	}

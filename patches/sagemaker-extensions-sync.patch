@@ -9,12 +9,12 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
 +	'extensions/sagemaker-extensions-sync/tsconfig.json',
  	'extensions/sagemaker-terminal-crash-mitigation/tsconfig.json',
  	'extensions/sagemaker-open-notebook-extension/tsconfig.json',
- 	'extensions/tunnel-forwarding/tsconfig.json',
+ 	'extensions/sagemaker-ui-dark-theme/tsconfig.json',
 Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
 +++ sagemaker-code-editor/vscode/build/npm/dirs.js
-@@ -40,6 +40,7 @@ const dirs = [
+@@ -40,11 +40,12 @@ const dirs = [
  	'extensions/php-language-features',
  	'extensions/references-view',
  	'extensions/sagemaker-extension',
@@ -22,6 +22,12 @@ Index: sagemaker-code-editor/vscode/build/npm/dirs.js
  	'extensions/sagemaker-idle-extension',
  	'extensions/sagemaker-terminal-crash-mitigation',
  	'extensions/sagemaker-open-notebook-extension',
+ 	'extensions/sagemaker-ui-dark-theme',
+-   'extensions/post-startup-notifications',
++    'extensions/post-startup-notifications',
+ 	'extensions/search-result',
+ 	'extensions/simple-browser',
+ 	'extensions/tunnel-forwarding',
 Index: sagemaker-code-editor/vscode/extensions/sagemaker-extensions-sync/.vscodeignore
 ===================================================================
 --- /dev/null
