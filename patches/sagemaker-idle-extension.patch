@@ -247,7 +247,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  import * as path from 'path';
  import * as http from 'http';
  import * as url from 'url';
-@@ -91,8 +93,47 @@ export async function serveFile(filePath
+@@ -91,8 +93,41 @@ export async function serveFile(filePath
  	}
  }
  
@@ -266,36 +266,30 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 + * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
 + * updates the last activity timestamp.
 + */
-+const checkTerminalActivity = (idleFilePath: string) => {
-+	fs.readdir('/dev/pts', (err, files) => {
-+		if (err) {
-+			console.error('Error reading /dev/pts directory:', err);
-+			return;
-+		}
-+
++function checkTerminalActivity(idleFilePath: string) {
++	try {
++		const files: string[] = fs.readdirSync('/dev/pts');
 +		const now = new Date();
-+		const activityDetected = files.some((file) => {
++
++		const activityDetected = files.some((file: string) => {
 +			const filePath = path.join('/dev/pts', file);
-+			try {
-+				const stats = fs.statSync(filePath);
-+				const mtime = new Date(stats.mtime).getTime();
-+				return now.getTime() - mtime < CHECK_INTERVAL;
-+			} catch (error) {
-+				console.error('Error reading file stats:', error);
-+				return false;
-+			}
++			const stats = fs.statSync(filePath);
++			const mtime = new Date(stats.mtime).getTime();
++			return now.getTime() - mtime < CHECK_INTERVAL;
 +		});
 +
 +		if (activityDetected) {
 +			fs.writeFileSync(idleFilePath, now.toISOString());
 +		}
-+	});
-+};
++	} catch (err) {
++		console.error('Error checking terminal activity:', err);
++	}
++}
 +
  export class WebClientServer {
  
  	private readonly _webExtensionResourceUrlTemplate: URI | undefined;
-@@ -100,6 +141,7 @@ export class WebClientServer {
+@@ -100,6 +135,7 @@ export class WebClientServer {
  	private readonly _staticRoute: string;
  	private readonly _callbackRoute: string;
  	private readonly _webExtensionRoute: string;
@@ -303,7 +297,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  
  	constructor(
  		private readonly _connectionToken: ServerConnectionToken,
-@@ -115,6 +157,7 @@ export class WebClientServer {
+@@ -115,6 +151,7 @@ export class WebClientServer {
  		this._staticRoute = `${serverRootPath}/static`;
  		this._callbackRoute = `${serverRootPath}/callback`;
  		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
@@ -311,7 +305,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  	}
  
  	/**
-@@ -132,6 +175,9 @@ export class WebClientServer {
+@@ -132,6 +169,9 @@ export class WebClientServer {
  			if (pathname === this._basePath) {
  				return this._handleRoot(req, res, parsedUrl);
  			}
@@ -321,7 +315,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  			if (pathname === this._callbackRoute) {
  				// callback support
  				return this._handleCallback(res);
-@@ -451,6 +497,33 @@ export class WebClientServer {
+@@ -451,6 +491,33 @@ export class WebClientServer {
  		});
  		return void res.end(data);
  	}

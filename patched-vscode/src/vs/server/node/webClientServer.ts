@@ -114,31 +114,25 @@ const APP_ROOT = dirname(FileAccess.asFileUri('').fsPath);
  * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
  * updates the last activity timestamp.
  */
-const checkTerminalActivity = (idleFilePath: string) => {
-	fs.readdir('/dev/pts', (err, files) => {
-		if (err) {
-			console.error('Error reading /dev/pts directory:', err);
-			return;
-		}
-
+function checkTerminalActivity(idleFilePath: string) {
+	try {
+		const files: string[] = fs.readdirSync('/dev/pts');
 		const now = new Date();
-		const activityDetected = files.some((file) => {
+
+		const activityDetected = files.some((file: string) => {
 			const filePath = path.join('/dev/pts', file);
-			try {
-				const stats = fs.statSync(filePath);
-				const mtime = new Date(stats.mtime).getTime();
-				return now.getTime() - mtime < CHECK_INTERVAL;
-			} catch (error) {
-				console.error('Error reading file stats:', error);
-				return false;
-			}
+			const stats = fs.statSync(filePath);
+			const mtime = new Date(stats.mtime).getTime();
+			return now.getTime() - mtime < CHECK_INTERVAL;
 		});
 
 		if (activityDetected) {
 			fs.writeFileSync(idleFilePath, now.toISOString());
 		}
-	});
-};
+	} catch (err) {
+		console.error('Error checking terminal activity:', err);
+	}
+}
 
 export class WebClientServer {
 
