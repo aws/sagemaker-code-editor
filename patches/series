@@ -11,8 +11,9 @@ sagemaker-idle-extension.patch
 terminal-crash-mitigation.patch
 sagemaker-open-notebook-extension.patch
 sagemaker-ui-dark-theme.patch
-sagemaker-ui-post-startup.patch
+# sagemaker-ui-post-startup.patch
 sagemaker-extension-smus-support.patch
 post-startup-notifications.patch
 sagemaker-extensions-sync.patch
-display-language.patch
+custom-extensions-marketplace.diff
+# display-language.patch
