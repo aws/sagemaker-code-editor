@@ -3,36 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createReadStream, existsSync, writeFileSync } from 'fs';
-import {readFile } from 'fs/promises';
-import { Promises } from 'vs/base/node/pfs';
+import { createReadStream, promises, existsSync, writeFileSync } from 'fs';
+import * as http from 'http';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
-import * as path from 'path';
-import * as http from 'http';
 import * as url from 'url';
 import * as cookie from 'cookie';
 import * as crypto from 'crypto';
-import { isEqualOrParent } from 'vs/base/common/extpath';
-import { getMediaMime } from 'vs/base/common/mime';
-import { isLinux } from 'vs/base/common/platform';
-import { ILogService } from 'vs/platform/log/common/log';
-import { IServerEnvironmentService } from 'vs/server/node/serverEnvironmentService';
-import { extname, dirname, join, normalize } from 'vs/base/common/path';
-import { FileAccess, connectionTokenCookieName, connectionTokenQueryName, Schemas, builtinExtensionsPath } from 'vs/base/common/network';
-import { generateUuid } from 'vs/base/common/uuid';
-import { IProductService } from 'vs/platform/product/common/productService';
-import { ServerConnectionToken, ServerConnectionTokenType } from 'vs/server/node/serverConnectionToken';
-import { asTextOrError, IRequestService } from 'vs/platform/request/common/request';
-import { IHeaders } from 'vs/base/parts/request/common/request';
-import { CancellationToken } from 'vs/base/common/cancellation';
-import { URI } from 'vs/base/common/uri';
-import { streamToBuffer } from 'vs/base/common/buffer';
-import { IProductConfiguration } from 'vs/base/common/product';
-import { isString } from 'vs/base/common/types';
-import { getLocaleFromConfig, getNLSConfiguration } from 'vs/server/node/remoteLanguagePacks';
-import { CharCode } from 'vs/base/common/charCode';
-import { IExtensionManifest } from 'vs/platform/extensions/common/extensions';
+import { isEqualOrParent } from '../../base/common/extpath.js';
+import { getMediaMime } from '../../base/common/mime.js';
+import { isLinux } from '../../base/common/platform.js';
+import { ILogService, LogLevel } from '../../platform/log/common/log.js';
+import { IServerEnvironmentService } from './serverEnvironmentService.js';
+import { extname, dirname, join, normalize, posix, resolve } from '../../base/common/path.js';
+import { FileAccess, connectionTokenCookieName, connectionTokenQueryName, Schemas, builtinExtensionsPath } from '../../base/common/network.js';
+import { generateUuid } from '../../base/common/uuid.js';
+import { IProductService } from '../../platform/product/common/productService.js';
+import { ServerConnectionToken, ServerConnectionTokenType } from './serverConnectionToken.js';
+import { asTextOrError, IRequestService } from '../../platform/request/common/request.js';
+import { IHeaders } from '../../base/parts/request/common/request.js';
+import { CancellationToken } from '../../base/common/cancellation.js';
+import { URI } from '../../base/common/uri.js';
+import { streamToBuffer } from '../../base/common/buffer.js';
+import { IProductConfiguration } from '../../base/common/product.js';
+import { isString, Mutable } from '../../base/common/types.js';
+import { CharCode } from '../../base/common/charCode.js';
+import { IExtensionManifest } from '../../platform/extensions/common/extensions.js';
+import { ICSSDevelopmentService } from '../../platform/cssDev/node/cssDevService.js';
 
 const textMimeType: { [ext: string]: string | undefined } = {
 	'.html': 'text/html',
@@ -63,7 +60,7 @@ export const enum CacheControl {
  */
 export async function serveFile(filePath: string, cacheControl: CacheControl, logService: ILogService, req: http.IncomingMessage, res: http.ServerResponse, responseHeaders: Record<string, string>): Promise<void> {
 	try {
-		const stat = await Promises.stat(filePath); // throws an error if file doesn't exist
+		const stat = await promises.stat(filePath); // throws an error if file doesn't exist
 		if (cacheControl === CacheControl.ETAG) {
 
 			// Check if file modified since
@@ -101,62 +98,57 @@ export async function serveFile(filePath: string, cacheControl: CacheControl, lo
 
 const APP_ROOT = dirname(FileAccess.asFileUri('').fsPath);
 
+const STATIC_PATH = `/static`;
+const CALLBACK_PATH = `/callback`;
+const WEB_EXTENSION_PATH = `/web-extension-resource`;
+const IDLE_EXTENSION_PATH = `/api/idle`;
+const POST_STARTUP_SCRIPT_PATH = `/api/poststartup`;
+
 export class WebClientServer {
 
 	private readonly _webExtensionResourceUrlTemplate: URI | undefined;
 
-	private readonly _staticRoute: string;
-	private readonly _callbackRoute: string;
-	private readonly _webExtensionRoute: string;
-	private readonly _idleRoute: string;
-	private readonly _postStartupScriptRoute: string;
-
 	constructor(
 		private readonly _connectionToken: ServerConnectionToken,
 		private readonly _basePath: string,
-		readonly serverRootPath: string,
+		private readonly _productPath: string,
 		@IServerEnvironmentService private readonly _environmentService: IServerEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
 		@IRequestService private readonly _requestService: IRequestService,
 		@IProductService private readonly _productService: IProductService,
+		@ICSSDevelopmentService private readonly _cssDevService: ICSSDevelopmentService
 	) {
 		this._webExtensionResourceUrlTemplate = this._productService.extensionsGallery?.resourceUrlTemplate ? URI.parse(this._productService.extensionsGallery.resourceUrlTemplate) : undefined;
-
-		this._staticRoute = `${serverRootPath}/static`;
-		this._callbackRoute = `${serverRootPath}/callback`;
-		this._webExtensionRoute = `${serverRootPath}/web-extension-resource`;
-		this._idleRoute = '/api/idle';
-		this._postStartupScriptRoute = '/api/poststartup';
 	}
 
 	/**
 	 * Handle web resources (i.e. only needed by the web client).
 	 * **NOTE**: This method is only invoked when the server has web bits.
 	 * **NOTE**: This method is only invoked after the connection token has been validated.
+	 * @param parsedUrl The URL to handle, including base and product path
+	 * @param pathname The pathname of the URL, without base and product path
 	 */
-	async handle(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
+	async handle(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery, pathname: string): Promise<void> {
 		try {
-			const pathname = parsedUrl.pathname!;
-
-			if (pathname.startsWith(this._staticRoute) && pathname.charCodeAt(this._staticRoute.length) === CharCode.Slash) {
-				return this._handleStatic(req, res, parsedUrl);
+			if (pathname.startsWith(STATIC_PATH) && pathname.charCodeAt(STATIC_PATH.length) === CharCode.Slash) {
+				return this._handleStatic(req, res, pathname.substring(STATIC_PATH.length));
 			}
-			if (pathname === this._basePath) {
+			if (pathname === '/') {
 				return this._handleRoot(req, res, parsedUrl);
 			}
-			if (pathname === this._idleRoute) {
-				return this._handleIdle(req, res);
-			}
-			if (pathname === this._callbackRoute) {
+			if (pathname === CALLBACK_PATH) {
 				// callback support
 				return this._handleCallback(res);
 			}
-			if (pathname.startsWith(this._webExtensionRoute) && pathname.charCodeAt(this._webExtensionRoute.length) === CharCode.Slash) {
-				// extension resource support
-				return this._handleWebExtensionResource(req, res, parsedUrl);
+			if (pathname === IDLE_EXTENSION_PATH) {
+				return this._handleIdle(req, res);
 			}
-			if (pathname === this._postStartupScriptRoute) {
+			if (pathname === POST_STARTUP_SCRIPT_PATH) {
 				return this._handlePostStartupScriptInvocation(req, res);
+			}
+			if (pathname.startsWith(WEB_EXTENSION_PATH) && pathname.charCodeAt(WEB_EXTENSION_PATH.length) === CharCode.Slash) {
+				// extension resource support
+				return this._handleWebExtensionResource(req, res, pathname.substring(WEB_EXTENSION_PATH.length));
 			}
 
 			return serveError(req, res, 404, 'Not found.');
@@ -169,15 +161,15 @@ export class WebClientServer {
 	}
 	/**
 	 * Handle HTTP requests for /static/*
+	 * @param resourcePath The path after /static/
 	 */
-	private async _handleStatic(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
+	private async _handleStatic(req: http.IncomingMessage, res: http.ServerResponse, resourcePath: string): Promise<void> {
 		const headers: Record<string, string> = Object.create(null);
 
 		// Strip the this._staticRoute from the path
-		const normalizedPathname = decodeURIComponent(parsedUrl.pathname!); // support paths that are uri-encoded (e.g. spaces => %20)
-		const relativeFilePath = normalizedPathname.substring(this._staticRoute.length + 1);
+		const normalizedPathname = decodeURIComponent(resourcePath); // support paths that are uri-encoded (e.g. spaces => %20)
 
-		const filePath = join(APP_ROOT, relativeFilePath); // join also normalizes the path
+		const filePath = join(APP_ROOT, normalizedPathname); // join also normalizes the path
 		if (!isEqualOrParent(filePath, APP_ROOT, !isLinux)) {
 			return serveError(req, res, 400, `Bad request.`);
 		}
@@ -192,15 +184,15 @@ export class WebClientServer {
 
 	/**
 	 * Handle extension resources
+	 * @param resourcePath The path after /web-extension-resource/
 	 */
-	private async _handleWebExtensionResource(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
+	private async _handleWebExtensionResource(req: http.IncomingMessage, res: http.ServerResponse, resourcePath: string): Promise<void> {
 		if (!this._webExtensionResourceUrlTemplate) {
 			return serveError(req, res, 500, 'No extension gallery service configured.');
 		}
 
-		// Strip `/web-extension-resource/` from the path
-		const normalizedPathname = decodeURIComponent(parsedUrl.pathname!); // support paths that are uri-encoded (e.g. spaces => %20)
-		const path = normalize(normalizedPathname.substring(this._webExtensionRoute.length + 1));
+		const normalizedPathname = decodeURIComponent(resourcePath); // support paths that are uri-encoded (e.g. spaces => %20)
+		const path = normalize(normalizedPathname);
 		const uri = URI.parse(path).with({
 			scheme: this._webExtensionResourceUrlTemplate.scheme,
 			authority: path.substring(0, path.indexOf('/')),
@@ -240,7 +232,7 @@ export class WebClientServer {
 			return serveError(req, res, status, text || `Request failed with status ${status}`);
 		}
 
-		const responseHeaders: Record<string, string> = Object.create(null);
+		const responseHeaders: Record<string, string | string[]> = Object.create(null);
 		const setResponseHeader = (header: string) => {
 			const value = context.res.headers[header];
 			if (value) {
@@ -260,6 +252,14 @@ export class WebClientServer {
 	 * Handle HTTP requests for /
 	 */
 	private async _handleRoot(req: http.IncomingMessage, res: http.ServerResponse, parsedUrl: url.UrlWithParsedQuery): Promise<void> {
+
+		const getFirstHeader = (headerName: string) => {
+			const val = req.headers[headerName];
+			return Array.isArray(val) ? val[0] : val;
+		};
+
+		// Prefix routes with basePath for clients
+		const basePath = getFirstHeader('x-forwarded-prefix') || this._basePath;
 
 		const queryConnectionToken = parsedUrl.query[connectionTokenQueryName];
 		if (typeof queryConnectionToken === 'string') {
@@ -281,26 +281,34 @@ export class WebClientServer {
 					newQuery[key] = parsedUrl.query[key];
 				}
 			}
-			const newLocation = url.format({ pathname: parsedUrl.pathname, query: newQuery });
+			const newLocation = url.format({ pathname: basePath, query: newQuery });
 			responseHeaders['Location'] = newLocation;
 
 			res.writeHead(302, responseHeaders);
 			return void res.end();
 		}
 
-		const getFirstHeader = (headerName: string) => {
-			const val = req.headers[headerName];
-			return Array.isArray(val) ? val[0] : val;
+		const replacePort = (host: string, port: string) => {
+			const index = host?.indexOf(':');
+			if (index !== -1) {
+				host = host?.substring(0, index);
+			}
+			host += `:${port}`;
+			return host;
 		};
 
 		const useTestResolver = (!this._environmentService.isBuilt && this._environmentService.args['use-test-resolver']);
-		const remoteAuthority = (
+		let remoteAuthority = (
 			useTestResolver
 				? 'test+test'
-				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host || window.location.host)
+				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host)
 		);
 		if (!remoteAuthority) {
 			return serveError(req, res, 400, `Bad request.`);
+		}
+		const forwardedPort = getFirstHeader('x-forwarded-port');
+		if (forwardedPort) {
+			remoteAuthority = replacePort(remoteAuthority, forwardedPort);
 		}
 
 		function asJSON(value: unknown): string {
@@ -314,9 +322,23 @@ export class WebClientServer {
 			_wrapWebWorkerExtHostInIframe = false;
 		}
 
-		const resolveWorkspaceURI = (defaultLocation?: string) => defaultLocation && URI.file(path.resolve(defaultLocation)).with({ scheme: Schemas.vscodeRemote, authority: remoteAuthority });
+		if (this._logService.getLevel() === LogLevel.Trace) {
+			['x-original-host', 'x-forwarded-host', 'x-forwarded-port', 'host'].forEach(header => {
+				const value = getFirstHeader(header);
+				if (value) {
+					this._logService.trace(`[WebClientServer] ${header}: ${value}`);
+				}
+			});
+			this._logService.trace(`[WebClientServer] Request URL: ${req.url}, basePath: ${basePath}, remoteAuthority: ${remoteAuthority}`);
+		}
 
-		const filePath = FileAccess.asFileUri(this._environmentService.isBuilt ? 'vs/code/browser/workbench/workbench.html' : 'vs/code/browser/workbench/workbench-dev.html').fsPath;
+		const staticRoute = posix.join(basePath, this._productPath, STATIC_PATH);
+		const callbackRoute = posix.join(basePath, this._productPath, CALLBACK_PATH);
+		const webExtensionRoute = posix.join(basePath, this._productPath, WEB_EXTENSION_PATH);
+
+		const resolveWorkspaceURI = (defaultLocation?: string) => defaultLocation && URI.file(resolve(defaultLocation)).with({ scheme: Schemas.vscodeRemote, authority: remoteAuthority });
+
+		const filePath = FileAccess.asFileUri(`vs/code/browser/workbench/workbench${this._environmentService.isBuilt ? '' : '-dev'}.html`).fsPath;
 		const authSessionInfo = !this._environmentService.isBuilt && this._environmentService.args['github-auth'] ? {
 			id: generateUuid(),
 			providerId: 'github',
@@ -324,27 +346,35 @@ export class WebClientServer {
 			scopes: [['user:email'], ['repo']]
 		} : undefined;
 
-		const basePath: string = this._environmentService.args['base-path'] || "/"
-		const base = relativeRoot(basePath)
-		const vscodeBase = relativePath(basePath)
-
-		const productConfiguration = {
-			rootEndpoint: base,
+		const productConfiguration: Partial<Mutable<IProductConfiguration>> = {
 			embedderIdentifier: 'server-distro',
-			extensionsGallery: this._productService.extensionsGallery,
-		} satisfies Partial<IProductConfiguration>;
+			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
+				...this._productService.extensionsGallery,
+				resourceUrlTemplate: this._webExtensionResourceUrlTemplate.with({
+					scheme: 'http',
+					authority: remoteAuthority,
+					path: `${webExtensionRoute}/${this._webExtensionResourceUrlTemplate.authority}${this._webExtensionResourceUrlTemplate.path}`
+				}).toString(true)
+			} : undefined
+		};
+
+		const proposedApi = this._environmentService.args['enable-proposed-api'];
+		if (proposedApi?.length) {
+			productConfiguration.extensionsEnabledWithApiProposalVersion ??= [];
+			productConfiguration.extensionsEnabledWithApiProposalVersion.push(...proposedApi);
+		}
 
 		if (!this._environmentService.isBuilt) {
 			try {
-				const productOverrides = JSON.parse((await Promises.readFile(join(APP_ROOT, 'product.overrides.json'))).toString());
+				const productOverrides = JSON.parse((await promises.readFile(join(APP_ROOT, 'product.overrides.json'))).toString());
 				Object.assign(productConfiguration, productOverrides);
 			} catch (err) {/* Ignore Error */ }
 		}
 
 		const workbenchWebConfiguration = {
 			remoteAuthority,
-			serverBasePath: this._basePath,
-			webviewEndpoint: vscodeBase + this._staticRoute + '/out/vs/workbench/contrib/webview/browser/pre',
+			serverBasePath: basePath,
+			webviewEndpoint: staticRoute + '/out/vs/workbench/contrib/webview/browser/pre',
 			userDataPath: this._environmentService.userDataPath,
 			_wrapWebWorkerExtHostInIframe,
 			developmentOptions: { enableSmokeTestDriver: this._environmentService.args['enable-smoke-test-driver'] ? true : undefined, logLevel: this._logService.getLevel() },
@@ -353,26 +383,42 @@ export class WebClientServer {
 			folderUri: resolveWorkspaceURI(this._environmentService.args['default-folder']),
 			workspaceUri: resolveWorkspaceURI(this._environmentService.args['default-workspace']),
 			productConfiguration,
-			callbackRoute: this._callbackRoute
+			callbackRoute: callbackRoute
 		};
 
-		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource.fsPath);
-		const nlsConfiguration = await getNLSConfiguration(locale, this._environmentService.userDataPath)
-		const nlsBaseUrl = this._productService.extensionsGallery?.nlsBaseUrl;
+		const cookies = cookie.parse(req.headers.cookie || '');
+		const locale = cookies['vscode.nls.locale'] || req.headers['accept-language']?.split(',')[0]?.toLowerCase() || 'en';
+		let WORKBENCH_NLS_BASE_URL: string | undefined;
+		let WORKBENCH_NLS_URL: string;
+		if (!locale.startsWith('en') && this._productService.nlsCoreBaseUrl) {
+			WORKBENCH_NLS_BASE_URL = this._productService.nlsCoreBaseUrl;
+			WORKBENCH_NLS_URL = `${WORKBENCH_NLS_BASE_URL}${this._productService.commit}/${this._productService.version}/${locale}/nls.messages.js`;
+		} else {
+			WORKBENCH_NLS_URL = ''; // fallback will apply
+		}
+
 		const values: { [key: string]: string } = {
 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
 			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
-			WORKBENCH_WEB_BASE_URL: vscodeBase + this._staticRoute,
-			WORKBENCH_NLS_BASE_URL: vscodeBase + (nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : ''),
-			BASE: base,
-			VS_BASE: vscodeBase,
-			NLS_CONFIGURATION: asJSON(nlsConfiguration),
+			WORKBENCH_WEB_BASE_URL: staticRoute,
+			WORKBENCH_NLS_URL,
+			WORKBENCH_NLS_FALLBACK_URL: `${staticRoute}/out/nls.messages.js`
 		};
+
+		// DEV ---------------------------------------------------------------------------------------
+		// DEV: This is for development and enables loading CSS via import-statements via import-maps.
+		// DEV: The server needs to send along all CSS modules so that the client can construct the
+		// DEV: import-map.
+		// DEV ---------------------------------------------------------------------------------------
+		if (this._cssDevService.isEnabled) {
+			const cssModules = await this._cssDevService.getCssModules();
+			values['WORKBENCH_DEV_CSS_MODULES'] = JSON.stringify(cssModules);
+		}
 
 		if (useTestResolver) {
 			const bundledExtensions: { extensionPath: string; packageJSON: IExtensionManifest }[] = [];
 			for (const extensionPath of ['vscode-test-resolver', 'github-authentication']) {
-				const packageJSON = JSON.parse((await Promises.readFile(FileAccess.asFileUri(`${builtinExtensionsPath}/${extensionPath}/package.json`).fsPath)).toString());
+				const packageJSON = JSON.parse((await promises.readFile(FileAccess.asFileUri(`${builtinExtensionsPath}/${extensionPath}/package.json`).fsPath)).toString());
 				bundledExtensions.push({ extensionPath, packageJSON });
 			}
 			values['WORKBENCH_BUILTIN_EXTENSIONS'] = asJSON(bundledExtensions);
@@ -380,20 +426,20 @@ export class WebClientServer {
 
 		let data;
 		try {
-			const workbenchTemplate = (await Promises.readFile(filePath)).toString();
+			const workbenchTemplate = (await promises.readFile(filePath)).toString();
 			data = workbenchTemplate.replace(/\{\{([^}]+)\}\}/g, (_, key) => values[key] ?? 'undefined');
 		} catch (e) {
 			res.writeHead(404, { 'Content-Type': 'text/plain' });
 			return void res.end('Not found');
 		}
 
-		const webWorkerExtensionHostIframeScriptSHA = 'sha256-75NYUUvf+5++1WbfCZOV3PSWxBhONpaxwx+mkOFRv/Y=';
+		const webWorkerExtensionHostIframeScriptSHA = 'sha256-2Q+j4hfT09+1+imS46J2YlkCtHWQt0/BE79PXjJ0ZJ8=';
 
 		const cspDirectives = [
 			'default-src \'self\';',
 			'img-src \'self\' https: data: blob:;',
 			'media-src \'self\';',
-			`script-src 'self' 'unsafe-eval' ${this._getScriptCspHashes(data).join(' ')} '${webWorkerExtensionHostIframeScriptSHA}' ${useTestResolver ? '' : `http://${remoteAuthority}`};`, // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
+			`script-src 'self' 'unsafe-eval' ${WORKBENCH_NLS_BASE_URL ?? ''} blob: 'nonce-1nline-m4p' ${this._getScriptCspHashes(data).join(' ')} '${webWorkerExtensionHostIframeScriptSHA}' 'sha256-/r7rqQ+yrxt57sxLuQ6AMYcy/lUpvAIzHjIJt/OeLWU=' ${useTestResolver ? '' : `http://${remoteAuthority}`};`,  // the sha is the same as in src/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html
 			'child-src \'self\';',
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
@@ -449,7 +495,7 @@ export class WebClientServer {
 	 */
 	private async _handleCallback(res: http.ServerResponse): Promise<void> {
 		const filePath = FileAccess.asFileUri('vs/code/browser/workbench/callback.html').fsPath;
-		const data = (await Promises.readFile(filePath)).toString();
+		const data = (await promises.readFile(filePath)).toString();
 		const cspDirectives = [
 			'default-src \'self\';',
 			'img-src \'self\' https: data: blob:;',
@@ -467,129 +513,62 @@ export class WebClientServer {
 	}
 
 	/**
- 	 * Handles API requests to retrieve the last activity timestamp.
-   */
-	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-		try {
-			const tmpDirectory = '/tmp/'
-			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
+	 * Handles API requests to run the post-startup script in SMD.
+	 */
+	private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
+		const logPath = '/var/log/apps/post_startup_default.log';
+		const logStream = fs.createWriteStream(logPath, { flags: 'a' });
 
-			// If idle shutdown file does not exist, this indicates the app UI may never been opened
-			// Create the initial metadata file
-			if (!existsSync(idleFilePath)) {
-				const timestamp = new Date().toISOString();
-				writeFileSync(idleFilePath, timestamp);
+		// Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
+		if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {
+			return serveError(req, res, 403, 'Forbidden');
+		} else {
+			//If postStartupScriptFile doesn't exist, it will throw FileNotFoundError (404)
+			//If exists, it will start the execution and add the execution logs in logFile.
+			try {
+				if (fs.existsSync(postStartupScriptPath)) {
+					// Adding 0o755 to make script file executable
+					fs.chmodSync(postStartupScriptPath, 0o755);
+
+					const subprocess = spawn('bash', [`${postStartupScriptPath}`], { cwd: '/' });
+					subprocess.stdout.pipe(logStream);
+					subprocess.stderr.pipe(logStream);
+
+					res.statusCode = 200;
+					res.setHeader('Content-Type', 'application/json');
+					res.end(JSON.stringify({ 'success': 'true' }));
+				} else {
+					serveError(req, res, 500, 'Poststartup script file not found at ' + postStartupScriptPath);
+				}
+			} catch (error) {
+				serveError(req, res, 500, error.message);
 			}
-
-			const data = await readFile(idleFilePath, 'utf8');
-
-			res.statusCode = 200;
-			res.setHeader('Content-Type', 'application/json');
-			res.end(JSON.stringify({ lastActiveTimestamp: data }));
-		} catch (error) {
-			serveError(req, res, 500, error.message)
 		}
 	}
 
-    /**
-     * Handles API requests to run the post-startup script in SMD.
-     */
-    private async _handlePostStartupScriptInvocation(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-        const postStartupScriptPath = '/etc/sagemaker-ui/sagemaker_ui_post_startup.sh'
-        const logPath = '/var/log/apps/post_startup_default.log';
-        const logStream = fs.createWriteStream(logPath, { flags: 'a' });
-
-        // Only trigger post-startup script invocation for SageMakerUnifiedStudio app.
-        if (process.env['SERVICE_NAME'] != ServiceName.SAGEMAKER_UNIFIED_STUDIO) {
-            return serveError(req, res, 403, 'Forbidden');
-        } else {
-            //If postStartupScriptFile doesn't exist, it will throw FileNotFoundError (404)
-            //If exists, it will start the execution and add the execution logs in logFile.
-            try {
-                if (fs.existsSync(postStartupScriptPath)) {
-                    // Adding 0o755 to make script file executable
-                    fs.chmodSync(postStartupScriptPath, 0o755);
-
-                    const subprocess = spawn('bash', [`${postStartupScriptPath}`], { cwd: '/' });
-                    subprocess.stdout.pipe(logStream);
-                    subprocess.stderr.pipe(logStream);
-
-                    res.statusCode = 200;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ 'success': 'true' }));
-                } else {
-                    serveError(req, res, 500, 'Poststartup script file not found at ' + postStartupScriptPath);
-                }
-            } catch (error) {
-                serveError(req, res, 500, error.message);
-            }
-        }
-    }
-}
-
-/**
- * Remove extra slashes in a URL.
- *
- * This is meant to fill the job of `path.join` so you can concatenate paths and
- * then normalize out any extra slashes.
- *
- * If you are using `path.join` you do not need this but note that `path` is for
- * file system paths, not URLs.
- */
-export const normalizeUrlPath = (url: string, keepTrailing = false): string => {
-	return url.replace(/\/\/+/g, "/").replace(/\/+$/, keepTrailing ? "/" : "")
-}
-
-/**
- * Get the relative path that will get us to the root of the page. For each
- * slash we need to go up a directory.  Will not have a trailing slash.
- *
- * For example:
- *
- * / => .
- * /foo => .
- * /foo/ => ./..
- * /foo/bar => ./..
- * /foo/bar/ => ./../..
- *
- * All paths must be relative in order to work behind a reverse proxy since we
- * we do not know the base path.  Anything that needs to be absolute (for
- * example cookies) must get the base path from the frontend.
- *
- * All relative paths must be prefixed with the relative root to ensure they
- * work no matter the depth at which they happen to appear.
- *
- * For Express `req.originalUrl` should be used as they remove the base from the
- * standard `url` property making it impossible to get the true depth.
- */
-export const relativeRoot = (originalUrl: string): string => {
-	const depth = (originalUrl.split("?", 1)[0].match(/\//g) || []).length
-	return normalizeUrlPath("./" + (depth > 1 ? "../".repeat(depth - 1) : ""))
-}
-
-/**
- * Get the relative path to the current resource.
- *
- * For example:
- *
- * / => .
- * /foo => ./foo
- * /foo/ => .
- * /foo/bar => ./bar
- * /foo/bar/ => .
- */
-export const relativePath = (originalUrl: string): string => {
-	const parts = originalUrl.split("?", 1)[0].split("/")
-	return normalizeUrlPath("./" + parts[parts.length - 1])
-}
-
-/**
- * code-server serves Code using Express.  Express removes the base from the url
- * and puts the original in `originalUrl` so we must use this to get the correct
- * depth.  Code is not aware it is behind Express so the types do not match.  We
- * may want to continue moving code into Code and eventually remove the Express
- * wrapper or move the web server back into code-server.
- */
-export const getOriginalUrl = (req: http.IncomingMessage): string => {
-	return (req as any).originalUrl || req.url
+	/**
+  	 * Handles API requests to retrieve the last activity timestamp.
+    */
+ 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+ 		try {
+ 			const tmpDirectory = '/tmp/'
+ 			const idleFilePath = join(tmpDirectory, '.sagemaker-last-active-timestamp');
+ 
+ 			// If idle shutdown file does not exist, this indicates the app UI may never been opened
+ 			// Create the initial metadata file
+ 			if (!existsSync(idleFilePath)) {
+ 				const timestamp = new Date().toISOString();
+ 				writeFileSync(idleFilePath, timestamp);
+ 			}
+ 
+ 			const data = await promises.readFile(idleFilePath, 'utf8');
+ 
+ 			res.statusCode = 200;
+ 			res.setHeader('Content-Type', 'application/json');
+ 			res.end(JSON.stringify({ lastActiveTimestamp: data }));
+ 		} catch (error) {
+ 			serveError(req, res, 500, error.message)
+ 		}
+ 	}
 }
