@@ -98,7 +98,7 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -331,14 +331,7 @@ export class WebClientServer {
+@@ -364,14 +364,7 @@ export class WebClientServer {
  		const productConfiguration = {
  			rootEndpoint: base,
  			embedderIdentifier: 'server-distro',

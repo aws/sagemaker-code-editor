@@ -9,7 +9,7 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
 +	'extensions/sagemaker-extensions-sync/tsconfig.json',
  	'extensions/sagemaker-terminal-crash-mitigation/tsconfig.json',
  	'extensions/sagemaker-open-notebook-extension/tsconfig.json',
- 	'extensions/tunnel-forwarding/tsconfig.json',
+ 	'extensions/sagemaker-ui-dark-theme/tsconfig.json',
 Index: sagemaker-code-editor/vscode/build/npm/dirs.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/npm/dirs.js
