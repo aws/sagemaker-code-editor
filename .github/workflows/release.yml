@@ -1,102 +1,121 @@
-name: Automated Release
+# Workflow name
+name: Release
 
-# Controls when the workflow will run
+# This workflow is triggered manually from the GitHub Actions tab.
 on:
-  # Triggers the workflow on updates to the "main" branch which include a version tag
-  push:
-    tags:        
-      - '**'           # Push events to every tag including hierarchical tags like v1.0/beta
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'The release version (e.g., v1.8.0). This will be used to create the Git tag.'
+        required: true
+        type: string
+      # This input specifies the branch to tag and release from.
+      source_branch:
+        description: 'The branch to create the release from (e.g., main or 1.8). This branch MUST have the final code.'
+        required: true
+        type: string
+        default: 'main'
 
-
-# Defines permissions granted to the GITHUB_TOKEN for this workflow run.
-# 'contents: write' is needed for actions like softprops/action-gh-release to create GitHub releases
-# and for peter-evans/create-pull-request if it were to commit to the same repo
-
-permissions:
-  contents: write
-
-  
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This job checks if the pushed tag is a valid version tag (starts with 'v')
-  check-tag:
+  # The job for creating a release
+  create-release:
+    name: Create Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # This permission is required for creating a release and uploading assets.
+      contents: write
+
     steps:
-      # This step performs the tag check
-      - name: Check tag is version tag
-        id: check # Assign an ID to this step to reference its outputs
+      # Step 1: Check out the code from the SPECIFIED BRANCH in the AWS repository.
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # This ensures we are on the correct branch to get the latest code.
+          ref: ${{ github.event.inputs.source_branch }}
+          # CRITICAL: We check out the code from the AWS repository directly.
+          repository: aws/sagemaker-code-editor
+
+      # Step 2: Explicitly get the commit SHA of the checked-out branch HEAD.
+      - name: Get commit SHA
+        id: get_sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      # Step 3: Delete existing tag in the AWS repo if you want to re-run the release.
+      - name: Delete existing tag (if any)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = '${{ github.event.inputs.version }}';
+            try {
+              await github.rest.git.deleteRef({
+                owner: 'aws',
+                repo: 'sagemaker-code-editor',
+                ref: `tags/${tag}`
+              });
+              console.log(`Deleted existing tag: ${tag}`);
+            } catch (e) {
+              if (e.status !== 404 && e.status !== 422) {
+                // Re-throw the error if it's not a "Not Found" or "Unprocessable" error
+                throw e;
+              }
+              console.log(`Tag ${tag} does not exist or already deleted.`);
+            }
+              
+
+      # Step 4: Download the build artifact from the UPSTREAM repository after a PUSH event.
+      - name: Download artifact from build workflow
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          # CRITICAL: Explicitly specify the repository where the build artifact was created.
+          repo: aws/sagemaker-code-editor
+          # BEST PRACTICE: Look for artifacts created by a 'push' event (e.g., after a PR is merged).
+          event: push
+          workflow: build.yml
+          branch: ${{ github.event.inputs.source_branch }}
+          name: npm-package
+          path: ./release-assets
+          workflow_conclusion: success
+
+      # Step 5: Prepare the release assets by renaming the artifact.
+      - name: Prepare release assets
+        id: prepare_assets
         run: |
-          # Check if the GitHub reference (github.ref) starts with 'refs/tags/v'
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            REF="${{ github.ref }}"
-            VERSION="${REF##refs/tags/v}"
-            echo "Tag starts with 'v'."
-            echo "Version: ${VERSION}"
-            echo "Continuing..."
-            # Set the version as an output variable for other jobs/steps
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
-            exit 0
-          else
-            echo "The tag doesn't start with 'v'. To release a new version, the tag must start with 'v'"
+          # Find the downloaded tarball (there should only be one).
+          ARTIFACT_FILE=$(find ./release-assets -name "*.tar.gz")
+          
+          if [ -z "$ARTIFACT_FILE" ]; then
+            echo "::error::Build artifact not found! Ensure a 'build.yml' workflow ran successfully on the '${{ github.event.inputs.source_branch }}' branch in 'aws/sagemaker-code-editor' after the code was pushed/merged."
             exit 1
           fi
-    outputs:
-      version: ${{ steps.check.outputs.version }}
-      
-  # This job builds the release tarball and publishes it to GitHub Releases 
-  release:
-    # Specifies the environment for this job (if you have environments configured)
-    environment: release
-    # This job runs on the latest Ubuntu environment
-    runs-on: ubuntu-latest
-    needs: [check-tag]
-    container:
-      image: node:20
-    steps:
-      # Checks out the repository code at the specific tag that triggered the workflow
-      - name: Checkout the main branch
-        uses: actions/checkout@v4
-      - name: Install Dependencies
-        run: |
-          apt-get update
-          apt-get install -y build-essential g++ libx11-dev libxkbfile-dev libsecret-1-dev libkrb5-dev python-is-python3 quilt
-      # Builds the tarball
-      - name: Build Tarball
-        id: build
-        run: |
-          # Configure git safe directory for operations within the workspace
-          git config --global --add safe.directory /__w/sagemaker-code-editor/sagemaker-code-editor
           
-          # Run the install script to build the tarball, passing the version
-          sh ./scripts/install.sh -t ${{ needs.check-tag.outputs.version }}
+          # Get the version from the manual input, and remove the leading 'v' if it exists.
+          VERSION_TAG="${{ github.event.inputs.version }}"
+          VERSION_NUM="${VERSION_TAG#v}"
           
-          # Define the tarball name based on the version
-          TARBALL_NAME="code-editor-v${{ needs.check-tag.outputs.version }}.tar.gz"
-          # Set the tarball name as an output variable
-          echo "tarball_name=${TARBALL_NAME}" >> $GITHUB_OUTPUT
+          # Create the new, clean filename for the release.
+          NEW_FILENAME="code-editor${VERSION_NUM}.tar.gz"
           
-          # Calculate the SHA256 hash of the tarball
-          SHA256_HASH=$(sha256sum ${TARBALL_NAME} | awk '{ print $1 }')
-          # Set the SHA256 hash as an output variable
-          echo "sha256_hash=${SHA256_HASH}" >> $GITHUB_OUTPUT
-      # Publishes the release to GitHub Releases
-      - name: Publish Release
-        id: publish # Assign an ID to this step to reference its outputs
-        uses: softprops/action-gh-release@v2.2.2 # Caution: Due to recent update of action-gh-release, it now requires node24. So here we still used the previous version v2.2.2
-        with:
-          # Name of the release (e.g., "Code Editor x.y.z")
-          name: Code Editor ${{ needs.check-tag.outputs.version }}
-          # Tag name for the release (e.g., "vx.y.z")
-          tag_name: v${{ needs.check-tag.outputs.version }}
-          # Files to upload as release assets
-          files: |
-            ${{ steps.build.outputs.tarball_name }}
-    # Define outputs for this job
-    outputs:
-      sha256_hash: ${{ steps.build.outputs.sha256_hash }}
-      assets: ${{ steps.publish.outputs.assets }}
+          # Rename the file.
+          mv "$ARTIFACT_FILE" "./release-assets/$NEW_FILENAME"
+          
+          echo "Renamed artifact to $NEW_FILENAME"
+          # Set the new filename as an output for the next step.
+          echo "filename=./release-assets/$NEW_FILENAME" >> $GITHUB_OUTPUT
 
- 
+      # Step 6: Create the GitHub Release in the AWS repo using the CORRECT commit SHA.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # We need a token with permissions to create releases in the AWS repo.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # CRITICAL: Explicitly specify the repository to create the release in.
+          repository: aws/sagemaker-code-editor
+          name: CodeEditor ${{ github.event.inputs.version }}
+          tag_name: ${{ github.event.inputs.version }}
+          files: ${{ steps.prepare_assets.outputs.filename }}
+          draft: false
+          generate_release_notes: false
+          # CRITICAL: Force the tag to be created on the commit we explicitly got in Step 2.
+          target_commitish: ${{ steps.get_sha.outputs.sha }}
