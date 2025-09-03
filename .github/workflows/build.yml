@@ -1,16 +1,14 @@
 # Workflow name
-name: Build sagemaker-code-editor and Generate Artifact
+name: Build
 
-
-
-# This workflow is triggered on pushes and pull requests.
+# This workflow is triggered on pushes and pull requests to the main branch.
 on:
   push:
-    branches:
-      - '**'
+    #branches:
+      #- main
   pull_request:
-    branches:
-      - '**'
+    #branches:
+      #- main
 
 # Concurrency settings to cancel in-progress runs for the same PR or branch
 # This prevents wasting resources on outdated commits.
@@ -19,10 +17,42 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Run unit tests before building the application
+
+  run-unit-tests:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Verify CSP line exists in target TypeScript file
+      - name: Check CSP configuration in webClientServer.ts
+        run: |
+          TARGET_FILE="patched-vscode/src/vs/server/node/webClientServer.ts"
+          REQUIRED_TEXT="'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://openvsxorg.blob.core.windows.net https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;'"
+
+          if [ ! -f "$TARGET_FILE" ]; then
+            echo "❌ FAIL: Target file $TARGET_FILE does not exist."
+            exit 1
+          fi
+
+          if grep -F "$REQUIRED_TEXT" "$TARGET_FILE" > /dev/null; then
+            echo "✅ PASS: Required CSP text exists."
+          else
+            echo "❌ FAIL: Required CSP text NOT found in $TARGET_FILE"
+            exit 1
+          fi
+
+
+
   # The main job for building the application
   build:
     name: Build sagemaker-code-editor
     runs-on: ubuntu-latest
+    # Ensure unit tests pass before building
+    needs: run-unit-tests 
     timeout-minutes: 180
     env:
       # Environment variable to optimize the build process
@@ -40,15 +70,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y make gcc g++ libx11-dev xorg-dev libxkbfile-dev libsecret-1-dev libkrb5-dev python3 jq perl gettext automake autoconf quilt
+
       # Step 3: Set up the Node.js environment. Version 20 is specified.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Step 4: Cache Node.js modules to speed up subsequent builds.
-      # The cache is invalidated if the lock file changes.
-      - name: Cache node modules
+      # Step 4: Cache Yarn dependencies to speed up subsequent builds.
+      - name: Cache Yarn dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -61,6 +91,7 @@ jobs:
           if [ -d patches ] && [ "$(ls -A patches)" ]; then
             quilt push -a || true
           fi
+
       # Step 6: Generate a version string for this specific build.
       # It's based on the commit SHA to create a unique identifier.
       - name: Set Development Version
@@ -70,6 +101,7 @@ jobs:
           VERSION="0.0.0-dev-${SHORT_SHA}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Generated version for this build: $VERSION"
+
       # Step 7: The main build process for vscode.
       - name: Build vscode
         run: |
@@ -78,14 +110,23 @@ jobs:
           export UV_THREADPOOL_SIZE=4
           npm i -g node-gyp
           yarn install --network-concurrency 1
+          
+          # Remove and re-add ripgrep
           VSCODE_RIPGREP_VERSION=$(jq -r '.dependencies."@vscode/ripgrep"' package.json)
           mv package.json package.json.orig
           jq 'del(.dependencies."@vscode/ripgrep")' package.json.orig > package.json
+          
+          # Re-run install to remove ripgrep
           yarn install
+          
+          # Add ripgrep back
           yarn add --ignore-scripts "@vscode/ripgrep@${VSCODE_RIPGREP_VERSION}"
+          
           ARCH_ALIAS=linux-x64
+          # Run the gulp build task
           yarn gulp vscode-reh-web-${ARCH_ALIAS}-min
-      # Step 8: Find the exact path of the build output directory.
+
+      # Step 8: Find the exact path of the original build output directory.
       - name: Find build output
         id: find_output
         run: |
@@ -96,19 +137,43 @@ jobs:
           fi
           echo "Build output found at: $BUILD_PATH"
           echo "build_path=$BUILD_PATH" >> $GITHUB_OUTPUT
-      # Step 9: Create a compressed tarball of the build output.
+      
+      # Step 9: Rename the build output directory to sagemaker-code-editor
+      - name: Rename build output directory
+        id: rename_output
+        run: |
+          ORIG_PATH="${{ steps.find_output.outputs.build_path }}"
+          PARENT_DIR=$(dirname "$ORIG_PATH")
+          mv "$ORIG_PATH" "$PARENT_DIR/sagemaker-code-editor"
+          echo "Renamed build output directory to: $PARENT_DIR/sagemaker-code-editor"
+          echo "build_path=$PARENT_DIR/sagemaker-code-editor" >> $GITHUB_OUTPUT
+      
+      # Step 10: Create a compressed tarball of the renamed build output.
       - name: Create tarball archive
         run: |
-          TARBALL="vscode-reh-web-linux-x64-${{ env.VERSION }}.tar.gz"
-          BUILD_DIR_PATH="${{ steps.find_output.outputs.build_path }}"
+          TARBALL="sagemaker-code-editor-${{ env.VERSION }}.tar.gz"
+          BUILD_DIR_PATH="${{ steps.rename_output.outputs.build_path }}"
           PARENT_DIR=$(dirname "$BUILD_DIR_PATH")
           BUILD_DIR_NAME=$(basename "$BUILD_DIR_PATH")
           echo "Creating '$TARBALL' from '$BUILD_DIR_NAME' in '$PARENT_DIR'"
           tar czf $TARBALL -C "$PARENT_DIR" "$BUILD_DIR_NAME"
-      # Step 10: Upload the tarball as a build artifact.
-      # This allows you to download the result from the workflow run summary page.
+      
+      # Step 11: Upload the tarball as a build artifact.
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vscode-reh-web-linux-x64-${{ env.VERSION }}
-          path: vscode-reh-web-linux-x64-${{ env.VERSION }}.tar.gz
+          name: yarn-package
+          path: sagemaker-code-editor-${{ env.VERSION }}.tar.gz
+  # Run end-to-end tests after the build is complete
+  run-e2e-tests:
+    name: Run e2e tests
+    runs-on: ubuntu-latest
+    needs: build  # Ensure e2e tests run after build
+    steps:
+      # Checkout repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Output placeholder message for e2e tests
+      - name: Test of e2e test
+        run: echo "Test of e2e test"
