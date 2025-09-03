@@ -75,11 +75,22 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/extensions/browser/
  
  		const searchValue = this.searchViewletState['query.value'] ? this.searchViewletState['query.value'] : '';
  
+ 		const searchContainer = append(this.header, $('.extensions-search-container'));
 Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
-@@ -339,11 +339,7 @@ export class WebClientServer {
+@@ -335,7 +335,6 @@
+ 
+ 		const staticRoute = posix.join(basePath, this._productPath, STATIC_PATH);
+ 		const callbackRoute = posix.join(basePath, this._productPath, CALLBACK_PATH);
+-		const webExtensionRoute = posix.join(basePath, this._productPath, WEB_EXTENSION_PATH);
+ 
+ 		const resolveWorkspaceURI = (defaultLocation?: string) => defaultLocation && URI.file(resolve(defaultLocation)).with({ scheme: Schemas.vscodeRemote, authority: remoteAuthority });
+ 
+@@ -347,20 +346,13 @@
+ 		} : undefined;
+ 
  		const productConfiguration: Partial<Mutable<IProductConfiguration>> = {
  			embedderIdentifier: 'server-distro',
 -			extensionsGallery: this._webExtensionResourceUrlTemplate && this._productService.extensionsGallery ? {
@@ -94,6 +105,11 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
  		};
  
  		const proposedApi = this._environmentService.args['enable-proposed-api'];
+ 		if (proposedApi?.length) {
+ 			productConfiguration.extensionsEnabledWithApiProposalVersion ??= [];
+ 			productConfiguration.extensionsEnabledWithApiProposalVersion.push(...proposedApi);
+ 		}
+ 
 Index: sagemaker-code-editor/vscode/product.json
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/product.json
@@ -118,12 +134,12 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/comm
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
-@@ -16,7 +16,6 @@ import { getServiceMachineId } from 'vs/
- import { IStorageService } from 'vs/platform/storage/common/storage';
- import { TelemetryLevel } from 'vs/platform/telemetry/common/telemetry';
- import { getTelemetryLevel, supportsTelemetry } from 'vs/platform/telemetry/common/telemetryUtils';
--import { RemoteAuthorities } from 'vs/base/common/network';
- import { TargetPlatform } from 'vs/platform/extensions/common/extensions';
+@@ -16,7 +16,6 @@ import { getServiceMachineId } from '../../externalServices/common/serviceMachineId.js';
+ import { IStorageService } from '../../storage/common/storage.js';
+ import { TelemetryLevel } from '../../telemetry/common/telemetry.js';
+ import { getTelemetryLevel, supportsTelemetry } from '../../telemetry/common/telemetryUtils.js';
+-import { RemoteAuthorities } from '../../../base/common/network.js';
+ import { TargetPlatform } from '../../extensions/common/extensions.js';
  
  const WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT = '/web-extension-resource/';
 @@ -123,7 +122,7 @@ export abstract class AbstractExtensionR
@@ -146,5 +162,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/comm
 +		// test if the path starts with the web extension resource end point segment
 +		return uriPath.startsWith(WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT);
  	}
+ 
+ }
  
  }
