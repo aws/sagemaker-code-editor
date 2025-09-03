@@ -162,7 +162,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: yarn-package
+          name: npm-package
           path: sagemaker-code-editor-${{ env.VERSION }}.tar.gz
   # Run end-to-end tests after the build is complete
   run-e2e-tests:
