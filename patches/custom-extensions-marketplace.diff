@@ -134,7 +134,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/comm
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/common/extensionResourceLoader.ts
-@@ -16,7 +16,6 @@ import { getServiceMachineId } from '../../externalServices/common/serviceMachineId.js';
+@@ -16,7 +16,6 @@ import { getServiceMachineId } from '..
  import { IStorageService } from '../../storage/common/storage.js';
  import { TelemetryLevel } from '../../telemetry/common/telemetry.js';
  import { getTelemetryLevel, supportsTelemetry } from '../../telemetry/common/telemetryUtils.js';
@@ -162,6 +162,8 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/extensionResourceLoader/comm
 +		// test if the path starts with the web extension resource end point segment
 +		return uriPath.startsWith(WEB_EXTENSION_RESOURCE_END_POINT_SEGMENT);
  	}
+ 
+ }
  
  }
  

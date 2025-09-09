@@ -1,0 +1,17 @@
+FROM npm-cache:latest AS builder
+
+WORKDIR /workspace
+
+# Declare a build argument to control the minify flag
+ARG ARGS
+
+# Apply patches and build
+COPY scripts/create-code-editor-tarball.sh ./scripts/create-code-editor-tarball.sh
+
+RUN echo "ARKA Build arguments: $ARGS"
+RUN chmod +x scripts/create-code-editor-tarball.sh && \
+    ./scripts/create-code-editor-tarball.sh -v "$(cat vscode/package.json | grep '"version"' | cut -d'"' -f4)"
+
+# Final stage: Minimal image with only the build artifacts to copy from
+FROM scratch
+COPY --from=builder /workspace/artifacts .

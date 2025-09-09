@@ -1,0 +1,17 @@
+# Exclude large directories that aren't needed for build
+vscode/node_modules
+
+# Exclude build artifacts
+*.tar.gz
+*.log
+
+# Exclude development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Exclude OS files
+.DS_Store
+Thumbs.db

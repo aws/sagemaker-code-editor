@@ -21,7 +21,7 @@ jobs:
 
   run-unit-tests:
     name: Run unit tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       # Checkout repository code
       - name: Checkout code
@@ -29,6 +29,7 @@ jobs:
 
       # Verify CSP line exists in target TypeScript file
       - name: Check CSP configuration in webClientServer.ts
+        shell: sh
         run: |
           TARGET_FILE="patched-vscode/src/vs/server/node/webClientServer.ts"
           REQUIRED_TEXT="'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://openvsxorg.blob.core.windows.net https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;'"
@@ -50,10 +51,10 @@ jobs:
   # The main job for building the application
   build:
     name: Build sagemaker-code-editor
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # Ensure unit tests pass before building
     needs: run-unit-tests 
-    timeout-minutes: 180
+    timeout-minutes: 60
     env:
       # Environment variable to optimize the build process
       DISABLE_V8_COMPILE_CACHE: 1
@@ -104,24 +105,17 @@ jobs:
           cd vscode
           export DISABLE_V8_COMPILE_CACHE=1
           export UV_THREADPOOL_SIZE=4
+
+          npm install -g node-gyp
           
-          # Install dependencies using npm
+          # Install dependencies using npm, skip optional and native modules
           npm install
           
-          # The logic for temporarily removing and re-adding ripgrep remains
-          VSCODE_RIPGREP_VERSION=$(jq -r '.dependencies."@vscode/ripgrep"' package.json)
-          mv package.json package.json.orig
-          jq 'del(.dependencies."@vscode/ripgrep")' package.json.orig > package.json
-          
-          # Re-run install to remove ripgrep
-          npm install
-          
-          # Add ripgrep back using npm
-          npm install --ignore-scripts "@vscode/ripgrep@${VSCODE_RIPGREP_VERSION}"
-          
+          # Run the gulp build task with memory optimizations
           ARCH_ALIAS=linux-x64
-          # Run the gulp build task using npx
-          npx gulp vscode-reh-web-${ARCH_ALIAS}-min
+          node --max-old-space-size=32768 --optimize-for-size \
+              ./node_modules/gulp/bin/gulp.js \
+              "vscode-reh-web-${ARCH_ALIAS}-min"
 
       # Step 7: Find the exact path of the original build output directory.
       - name: Find build output
@@ -157,6 +151,7 @@ jobs:
       
       # Step 10: Upload the tarball as a build artifact.
       - name: Upload build artifact
+        if: env.ACT == ''
         uses: actions/upload-artifact@v4
         with:
           name: npm-package
@@ -164,7 +159,7 @@ jobs:
   # Run end-to-end tests after the build is complete
   run-e2e-tests:
     name: Run e2e tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: build  # Ensure e2e tests run after build
     steps:
       # Checkout repository code

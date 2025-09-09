@@ -91,7 +91,6 @@ if (typeof nodeProcess === 'object') {
 			const resolved = nlsConfig.availableLanguages['*'];
 			_locale = nlsConfig.locale;
 			_platformLocale = nlsConfig.osLocale;
-			// VSCode's default language is 'en'
 			_language = resolved ? resolved : LANGUAGE_DEFAULT;
 			_translationsConfigFile = nlsConfig._translationsConfigFile;
 		} catch (e) {
@@ -109,10 +108,9 @@ else if (typeof navigator === 'object' && !isElectronRenderer) {
 	_isLinux = _userAgent.indexOf('Linux') >= 0;
 	_isMobile = _userAgent?.indexOf('Mobi') >= 0;
 	_isWeb = true;
-
 	_locale = LANGUAGE_DEFAULT;
-	_language = _locale;
-	_platformLocale = navigator.language;
+ 	_language = _locale;
+ 	_platformLocale = navigator.language;
 	const el = typeof document !== 'undefined' && document.getElementById('vscode-remote-nls-configuration');
 	const rawNlsConfig = el && el.getAttribute('data-settings');
 	if (rawNlsConfig) {
@@ -180,7 +178,7 @@ export const userAgent = _userAgent;
 /**
  * The language used for the user interface. The format of
  * the string is all lower case (e.g. zh-tw for Traditional
- * Chinese)
+ * Chinese or de for German)
  */
 export const language = _language;
 
@@ -206,15 +204,16 @@ export namespace Language {
 }
 
 /**
- * The OS locale or the locale specified by --locale. The format of
- * the string is all lower case (e.g. zh-tw for Traditional
- * Chinese). The UI is not necessarily shown in the provided locale.
+ * Desktop: The OS locale or the locale specified by --locale or `argv.json`.
+ * Web: matches `platformLocale`.
+ *
+ * The UI is not necessarily shown in the provided locale.
  */
 export const locale = _locale;
 
 /**
  * This will always be set to the OS/browser's locale regardless of
- * what was specified by --locale. The format of the string is all
+ * what was specified otherwise. The format of the string is all
  * lower case (e.g. zh-tw for Traditional Chinese). The UI is not
  * necessarily shown in the provided locale.
  */

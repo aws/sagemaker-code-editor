@@ -17,4 +17,4 @@ post-startup-notifications.patch
 sagemaker-extensions-sync.patch
 custom-extensions-marketplace.diff
 signature-verification.diff
-# display-language.patch
+display-language.patch

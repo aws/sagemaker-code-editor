@@ -28,6 +28,19 @@ This script will:
 - Run `yarn watch` from within the `vscode` folder
 - Open a new terminal and run `./vscode/scripts/code-server.sh --launch`
 
+## Make Commands
+
+Available make targets for building and testing:
+
+- `make build-cache` - Build SageMaker Code Editor with multi-stage npm cache
+- `make build` - Build SageMaker Code Editor and output artifacts to ./artifacts
+- `make install-act` - Install act (GitHub Actions runner) for local testing
+- `make run-github` - Run complete GitHub Actions workflow locally using act
+- `make run-local TARBALL=<tarball-name>` - Build and run SageMaker Code Editor locally on port 8888 using specified tarball
+- `make clean` - Clean build artifacts and act temporary files
+
+Example: `make run-local TARBALL=code-editor1.8.0b5.tar.gz`
+
 ## Troubleshooting and Feedback
 
 For any issues that customers would like to report, please route to the `amazon-sagemaker-feedback` repository: https://github.com/aws/amazon-sagemaker-feedback

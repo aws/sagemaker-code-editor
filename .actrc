@@ -1,0 +1,2 @@
+-P ubuntu-latest=node:22-bookworm
+--container-options=--memory=32g --network=host
