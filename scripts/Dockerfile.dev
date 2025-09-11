@@ -1,0 +1,36 @@
+FROM ubuntu:24.04 AS base-image
+
+# Install required tools and Node.js
+RUN apt-get update && apt-get install -y \
+    git \
+    python3 \
+    python3-pip \
+    build-essential \
+    curl \
+    quilt \
+    pkg-config \
+    libx11-dev \
+    libxkbfile-dev \
+    libsecret-1-dev \
+    libkrb5-dev \
+    libgssapi-krb5-2 \
+    time \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22 (latest LTS)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs
+
+# Stage 2: NPM Dependencies Cache
+# This stage uses the pre-configured base-image to build the cache.
+FROM base-image AS npm-cache
+
+# Install supervisord
+RUN apt-get update && \
+    apt-get install -y supervisor
+
+WORKDIR /workspace
+
+EXPOSE 8080
+
+# Following is the entrypoint script for local runs: /workspace/scripts/run-code-editor-dev.sh

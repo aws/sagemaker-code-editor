@@ -1,0 +1,27 @@
+FROM npm-cache:latest AS builder
+
+WORKDIR /workspace
+
+# Declare a build argument to control the minify flag
+ARG ARGS
+
+# Copy source files except vscode so new patches are picked up without cache busting
+COPY patches ./patches
+COPY resources ./resources
+COPY .git ./.git
+COPY scripts/ ./scripts/
+COPY .pc ./.pc
+COPY LICENSE .
+COPY LICENSE-THIRD-PARTY .
+
+# Apply patches and build
+RUN chmod +x scripts/docker-install.sh && \
+    ./scripts/docker-install.sh -t "$(cat vscode/package.json | grep '"version"' | cut -d'"' -f4)"
+
+RUN echo "Build arguments: $ARGS"
+RUN chmod +x scripts/create-code-editor-tarball.sh && \
+    ./scripts/create-code-editor-tarball.sh -v "$(cat vscode/package.json | grep '"version"' | cut -d'"' -f4)"
+
+# Final stage: Minimal image with only the build artifacts to copy from
+FROM scratch
+COPY --from=builder /workspace/artifacts .

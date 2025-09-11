@@ -9,6 +9,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # The main job for building the application
   build:
     name: Build sagemaker-code-editor
     runs-on: ubuntu-latest
@@ -37,7 +38,13 @@ jobs:
       - name: Apply patches (if any)
         run: |
           if [ -d patches ] && [ "$(ls -A patches)" ]; then
-            quilt push -a || true
+            {
+              quilt push -a --leave-rejects --color=auto 
+            } || {
+              printf "\nPatching error, review logs!\n"
+              find ./vscode -name "*.rej"
+              exit 1
+            }
           fi
 
       - name: Set Development Version
@@ -53,18 +60,17 @@ jobs:
           cd vscode
           export DISABLE_V8_COMPILE_CACHE=1
           export UV_THREADPOOL_SIZE=4
+
+          npm install -g node-gyp
           
+          # Install dependencies using npm, skip optional and native modules
           npm install
           
-          VSCODE_RIPGREP_VERSION=$(jq -r '.dependencies."@vscode/ripgrep"' package.json)
-          mv package.json package.json.orig
-          jq 'del(.dependencies."@vscode/ripgrep")' package.json.orig > package.json
-          
-          npm install
-          npm install --ignore-scripts "@vscode/ripgrep@${VSCODE_RIPGREP_VERSION}"
-          
+          # Run the gulp build task with memory optimizations
           ARCH_ALIAS=linux-x64
-          npx gulp vscode-reh-web-${ARCH_ALIAS}-min
+          node --max-old-space-size=32768 --optimize-for-size \
+              ./node_modules/gulp/bin/gulp.js \
+              "vscode-reh-web-${ARCH_ALIAS}-min"
 
       - name: Find build output
         id: find_output
@@ -96,6 +102,7 @@ jobs:
           tar czf $TARBALL -C "$PARENT_DIR" "$BUILD_DIR_NAME"
       
       - name: Upload build artifact
+        if: env.ACT == ''
         uses: actions/upload-artifact@v4
         with:
           name: npm-package

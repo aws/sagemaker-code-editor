@@ -16,23 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repo with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - run: npm ci
-      - name: Download build artifact
-        if: github.event_name != 'pull_request'
-        uses: actions/download-artifact@v4
-        with:
-          name: build-package
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
       - name: Run E2E tests
         run: |
           # Add your actual E2E test commands here
-          echo "Running E2E tests..."
+          echo "[PLACEHOLDER] Running E2E tests..."
           # Example: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()

@@ -1,0 +1,24 @@
+FROM public.ecr.aws/sagemaker/sagemaker-distribution:latest-cpu
+
+# Accept tarball name as build argument
+ARG TARBALL=code-editor1.8.0b5.tar.gz
+
+# Switch to root to install
+USER root
+
+# Copy and extract the code editor to /tmp
+COPY .artifacts/${TARBALL} /tmp/
+RUN cd /tmp && tar -xzf ${TARBALL}
+
+# Move to final location and set permissions
+RUN mv /tmp/sagemaker-code-editor /opt/ && \
+    chmod +x /opt/sagemaker-code-editor/bin/code-server-oss
+
+# Add to PATH
+ENV PATH="/opt/sagemaker-code-editor/bin:$PATH"
+
+# Expose port
+EXPOSE 8000
+
+# Run code-server-oss with host binding to all interfaces
+CMD ["code-server-oss", "--host", "0.0.0.0", "--without-connection-token"]

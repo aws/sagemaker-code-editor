@@ -28,6 +28,25 @@ This script will:
 - Run `yarn watch` from within the `vscode` folder
 - Open a new terminal and run `./vscode/scripts/code-server.sh --launch`
 
+## Make Commands
+
+Available make targets for building and testing:
+
+### 1. When making local changes to iterate faster where tarball generation is not required [each run takes 10-20 mins]
+- `make run-local` - Build and run SageMaker Code Editor locally from source and does not require a TARBALL; this process runs a watcher so changes are automatically picked from local workspace
+- `make clean-vscode` - Cleans node_modules and out files
+
+### 2. Once local changes are tested; follow this process to generate minified tarball [each run takes ~40 mins to build] 
+- `make build-cache` - Build SageMaker Code Editor with multi-stage npm cache; Run once and layer gets cached with node_modules
+- `make build` - Build SageMaker Code Editor and output artifacts (tarball) to ./artifacts
+- `make run-local TARBALL=<tarball-name>` - Build and run SageMaker Code Editor locally on port 8888 using specified tarball from previos step. Example: `make run-local TARBALL=sagemaker-code-editor-1.101.2.tar.gz`
+
+### 3. This process is used to test and simulate github workflows locally [each run takes ~60 mins] 
+- `make run-github` - Run complete GitHub Actions workflow locally using act
+
+### 4. Cleanup
+- `make clean` - Cleans node_modules, out files, and act temporary files
+
 ## Troubleshooting and Feedback
 
 For any issues that customers would like to report, please route to the `amazon-sagemaker-feedback` repository: https://github.com/aws/amazon-sagemaker-feedback
