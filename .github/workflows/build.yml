@@ -9,6 +9,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # The main job for building the application
   build:
     name: Build sagemaker-code-editor
     runs-on: ubuntu-22.04
@@ -37,7 +38,13 @@ jobs:
       - name: Apply patches (if any)
         run: |
           if [ -d patches ] && [ "$(ls -A patches)" ]; then
-            quilt push -a || true
+            {
+              quilt push -a --leave-rejects --color=auto 
+            } || {
+              printf "\nPatching error, review logs!\n"
+              find ./vscode -name "*.rej"
+              exit 1
+            }
           fi
 
       - name: Set Development Version

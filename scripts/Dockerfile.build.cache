@@ -27,7 +27,6 @@ FROM base-image AS npm-cache
 
 WORKDIR /workspace
 
-# Copy all package.json and package-lock.json using BuildKit glob
 COPY vscode ./vscode
 COPY patches ./patches
 COPY resources ./resources
@@ -35,6 +34,7 @@ COPY .git ./.git
 COPY scripts/postinstall.sh ./scripts/postinstall.sh
 COPY scripts/docker-install.sh ./scripts/docker-install.sh
 COPY scripts/copy-resources.sh ./scripts/copy-resources.sh
+COPY .pc ./.pc
 COPY LICENSE .
 COPY LICENSE-THIRD-PARTY .
 

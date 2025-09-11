@@ -48,13 +48,16 @@ git submodule update --init
 
 # Apply patches
 printf "\n======== Applying patches ========\n"
-{
-  quilt push -a --leave-rejects --color=auto 
-} || {
-  printf "\nPatching error, review logs!\n"
-  find ./vscode -name "*.rej"
-  exit 1
-}
+
+if [ -d patches ] && [ "$(ls -A patches)" ]; then
+  {
+    quilt push -a --leave-rejects --color=auto 
+  } || {
+    printf "\nPatching error, review logs!\n"
+    find ./vscode -name "*.rej"
+    exit 1
+  }
+fi
 
 
 # Generate Licenses

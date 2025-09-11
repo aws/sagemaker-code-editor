@@ -1,25 +1,11 @@
-# Stage 3: Main Build
-# This stage also uses the base-image, but only copies the necessary artifacts from Stage 2.
-FROM npm-cache
+FROM npm-cache:latest
+
+# Install supervisord
+RUN apt-get update && \
+    apt-get install -y supervisor
 
 WORKDIR /workspace
 
-# Copy source code
-COPY scripts ./scripts
-COPY .git ./.git
-COPY LICENSE .
-COPY LICENSE-THIRD-PARTY .
-
-# Apply patches and build
-# RUN chmod +x scripts/docker-install.sh && \
-#     ./scripts/docker-install.sh -t "$(cat vscode/package.json | grep '"version"' | cut -d'"' -f4)"
-
-WORKDIR /workspace/vscode
-
-# RUN npm i
-
-# RUN npm run watch
-
-ENTRYPOINT [ "sh", "-c", "npm run watch & ./scripts/code-web.sh --host 0.0.0.0 --port 8080" ]
-
 EXPOSE 8080
+
+# ENTRYPOINT [ "/workspace/scripts/run-code-editor-dev.sh" ]

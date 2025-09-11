@@ -33,9 +33,9 @@ node --max-old-space-size=16384 --optimize-for-size \
 popd
 
 TARBALL="sagemaker-code-editor-${VERSION}.tar.gz"
-BUILD_DIR_PATH=artifacts
+BUILD_DIR_PATH=.artifacts
 
 mv vscode-reh-web-linux-x64 sagemaker-code-editor
-mkdir artifacts
-tar -czf artifacts/${TARBALL} sagemaker-code-editor 
-sha256sum artifacts/${TARBALL}
+mkdir ${BUILD_DIR_PATH}
+tar -czf ${BUILD_DIR_PATH}/${TARBALL} sagemaker-code-editor 
+sha256sum ${BUILD_DIR_PATH}/${TARBALL}
