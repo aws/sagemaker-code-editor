@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-<<<<<<< HEAD
 import { CancellationTokenSource } from '../../../base/common/cancellation.js';
 import { URI } from '../../../base/common/uri.js';
 import { ProxyChannel } from '../../../base/parts/ipc/common/ipc.js';
@@ -12,16 +11,6 @@ import { IExtensionResourceLoaderService } from '../../extensionResourceLoader/c
 import { ILanguagePackItem, ILanguagePackService, LanguagePackBaseService } from '../common/languagePacks.js';
 import { ILogService } from '../../log/common/log.js';
 import { IRemoteAgentService } from '../../../workbench/services/remote/common/remoteAgentService.js';
-=======
-import { CancellationTokenSource } from 'vs/base/common/cancellation';
-import { URI } from 'vs/base/common/uri';
-import { ProxyChannel } from 'vs/base/parts/ipc/common/ipc';
-import { IExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionManagement';
-import { IExtensionResourceLoaderService } from 'vs/platform/extensionResourceLoader/common/extensionResourceLoader';
-import { ILanguagePackItem, ILanguagePackService, LanguagePackBaseService } from 'vs/platform/languagePacks/common/languagePacks';
-import { ILogService } from 'vs/platform/log/common/log';
-import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
->>>>>>> 34c670ba (Update patched-vscode)
 
 export class WebLanguagePacksService extends LanguagePackBaseService {
 	private readonly languagePackService: ILanguagePackService;

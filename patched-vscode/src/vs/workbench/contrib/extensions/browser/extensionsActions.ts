@@ -475,7 +475,6 @@ export class InstallAction extends ExtensionAction {
 		if (this.extension.isBuiltin) {
 			return;
 		}
-<<<<<<< HEAD
 		if (this.extension.state !== ExtensionState.Uninstalled) {
 			return;
 		}
@@ -489,10 +488,6 @@ export class InstallAction extends ExtensionAction {
 		this.class = InstallAction.CLASS;
 		if (await this.extensionsWorkbenchService.canInstall(this.extension) === true) {
 			this.enabled = true;
-=======
-		if (this.extension.state === ExtensionState.Uninstalled && await this.extensionsWorkbenchService.canInstall(this.extension)) {
-			this.enabled = this.options.installPreReleaseVersion ? this.extension.hasPreReleaseVersion : this.extension.hasReleaseVersion;
->>>>>>> 34c670ba (Update patched-vscode)
 			this.updateLabel();
 		}
 	}
