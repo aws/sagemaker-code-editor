@@ -12,7 +12,7 @@ jobs:
   # The main job for building the application
   build:
     name: Build sagemaker-code-editor
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
       DISABLE_V8_COMPILE_CACHE: 1
