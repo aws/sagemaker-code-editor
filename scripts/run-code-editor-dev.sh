@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# ONLY FOR LOCAL DEV USECASE
+# This script is intended to be run inside the docker container
+# It will setup the environment and start the code editor in watch mode within the container
+
 set +e
 
 # Set current project root
@@ -49,12 +53,11 @@ printf "\n======== Starting Code Editor and Watch process using supervisord ====
 
 npm run watch &
 sleep 300
-# npm run watch-web &
-# sleep 120
 
+# This script can be directly used to run code server without supervisord
 # ./scripts/code-server.sh --host 0.0.0.0 --port 8000 --without-connection-token
 
-# Create supervisord config
+# Create supervisord config to run code server
 cat > /etc/supervisor/supervisord.conf << EOF
 [unix_http_server]
 file=/var/run/supervisor.sock

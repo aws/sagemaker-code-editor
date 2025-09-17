@@ -78,7 +78,6 @@ if [ "$CREATE_TARBALL" = true ]; then
   # Build tarball for conda feedstock from vscode dir
   printf "\n======== Build Tarball for Conda Feedstock ========\n"
   bash ${PROJ_ROOT}/scripts/create_code_editor_tarball.sh -v ${VERSION}
-  exit 0
 fi
 
 # Copy resources

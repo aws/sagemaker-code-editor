@@ -1,28 +1,8 @@
 #!/bin/bash
 
-usage() {
-  printf """
-Usage: $0 [-t <VERSION>] [-v] [-h]
-
-Otions:
-  -t <VERSION>    Create a tarball with the specified version
-  -v              Enable verbose output
-  -h              Show this help message
-"""
-}
-
-while getopts "t:hv" opt; do
-  case $opt in
-    t)  version="$OPTARG"
-        CREATE_TARBALL=true ;;
-    v)  VERBOSE_ARG="--verbose" ;;
-    h)  usage; exit 0 ;;
-    :)  printf "Error: -${OPTARG} requires an argument.\n" >&2; exit 1 ;;
-    ?) usage; exit 1 ;;
-  esac
-done
-
-VERSION=$version
+# ONLY FOR LOCAL BUILD USECASE
+# This script is intended to be run inside the docker container
+# It will setup the environment and build the project within the container
 
 # set +e to prevent quilt from exiting when no patches popped
 set +e
@@ -34,10 +14,6 @@ PROJ_ROOT=$(pwd)
 printf "\n======== Cleaning out patches ========\n"
 quilt pop -a
 rm -rf .pc
-
-# empty vscode module
-# printf "\n======== Delete data in vs code module if present ========\n"
-# rm -rf ${PROJ_ROOT}/vscode/.
 
 # re-enable -e to allow exiting on error
 set -e
@@ -72,24 +48,13 @@ cd ${PROJ_ROOT}
 printf "\n======== Comment out breaking git config lines in postinstall.js ========\n"
 sh ${PROJ_ROOT}/scripts/postinstall.sh
 
-# Delete node_modules to prevent node-gyp build error and reduce tarball size
-# printf "\n======== Deleting vscode/node_modules ========\n"
-# find "${PROJ_ROOT}/vscode" -name "node_modules" -type d -prune -exec rm -rf '{}' +
-
 # Copy resources
 printf "\n======== Copy resources ========\n"
 ${PROJ_ROOT}/scripts/copy-resources.sh
 
-# # Copy patched files to patches-vscode
-# rm -rf patched-vscode && mkdir patched-vscode && cp -R vscode/* patched-vscode/
-
 # Build the project
 printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
-# npm --cwd "${PROJ_ROOT}/vscode" install --pure-lockfile ${VERBOSE_ARG}
-# npm --cwd "${PROJ_ROOT}/vscode" download-builtin-extensions
 cd ${PROJ_ROOT}/vscode
-# npm install --no-audit --no-fund --prefer-offline
-# npm run download-builtin-extensions
 npm config set cache ~/.npm --global
 npm install -g node-gyp
 npm install --use-cache --no-audit --no-fund --prefer-offline --verbose --no-optional

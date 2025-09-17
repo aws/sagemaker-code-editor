@@ -1,4 +1,4 @@
-.PHONY: build-cache build install-act run-github run-local clean
+.PHONY: build-cache build install-act run-github run-local clean-vscode clean
 
 build-cache:
 	@echo "Building SageMaker Code Editor (multi-stage npm cache)..."
@@ -67,9 +67,8 @@ clean-vscode:
 	@rm -rf vscode/out/* 2>/dev/null || true
 	@echo "VSCode cleanup completed"
 
-clean:
+clean: clean-vscode
 	@echo "Cleaning act temporary files and Docker images..."
 	@echo "Removing act cache..."
 	@rm -rf ~/.cache/act 2>/dev/null || true
 	@echo "Act cleanup completed"
-
