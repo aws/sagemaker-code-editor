@@ -78,6 +78,15 @@ Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/webview/browser/pre
 
  	<!-- Disable pinch zooming -->
  	<meta name="viewport"
+@@ -238,7 +238,7 @@
+			}
+
+ 			const swPath = encodeURI(`service-worker.js?v=${expectedWorkerVersion}&vscode-resource-base-authority=${searchParams.get('vscode-resource-base-authority')}&remoteAuthority=${searchParams.get('remoteAuthority') ?? ''}`);
+-			navigator.serviceWorker.register(swPath, { type: 'module' })
++			navigator.serviceWorker.register(swPath)
+ 				.then(async registration => {
+ 					/**
+ 					 * @param {MessageEvent} event
 @@ -344,6 +344,12 @@
  
  				const hostname = location.hostname;
