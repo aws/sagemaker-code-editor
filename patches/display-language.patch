@@ -85,9 +85,16 @@ Index: sagemaker-code-editor/vscode/src/vs/code/browser/workbench/workbench.html
  		<!-- Workbench Auth Session -->
  		<meta id="vscode-workbench-auth-session" data-settings="{{WORKBENCH_AUTH_SESSION}}">
  
-@@ -37,6 +40,47 @@
+@@ -33,8 +36,53 @@
+	<!-- Startup (do not modify order of script tags!) -->
++	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/loader.js"></script>
++	<script src="{{WORKBENCH_WEB_BASE_URL}}/out/vs/webPackagePaths.js"></script>
+	<script>
  		const baseUrl = new URL('{{WORKBENCH_WEB_BASE_URL}}', window.location.origin).toString();
- 		globalThis._VSCODE_FILE_ROOT = baseUrl + '/out/';
+- 		globalThis._VSCODE_FILE_ROOT = baseUrl + '/out/';
++		Object.keys(self.webPackagePaths).map(function (key, index) {
++			self.webPackagePaths[key] = `${baseUrl}/node_modules/${key}/${self.webPackagePaths[key]}`;
++		});
 +		
 +		// Set up nls if the user is not using the default language (English)
 +		const nlsConfig = {};
@@ -186,7 +193,120 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/languagePacks/browser/langua
 +		return this.languagePackService.getInstalledLanguages()
  	}
  }
+Index: sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/server/node/remoteLanguagePacks.ts
++++ sagemaker-code-editor/vscode/src/vs/server/node/remoteLanguagePacks.ts
+@@ -0,38 +0,80 @@ import { FileAccess } from 'vs/base/comm
+ /*---------------------------------------------------------------------------------------------
+  *  Copyright (c) Microsoft Corporation. All rights reserved.
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
 
+ import { FileAccess } from '../../base/common/network.js';
+-import { join } from '../../base/common/path.js';
+-import type { INLSConfiguration } from '../../nls.js';
+-import { resolveNLSConfiguration } from '../../base/node/nls.js';
+-import { Promises } from '../../base/node/pfs.js';
+-import product from '../../platform/product/common/product.js';
++import * as path from '../../base/common/path.js';
++import * as lp from '../../base/node/languagePacks.js';
+
+-const nlsMetadataPath = join(FileAccess.asFileUri('').fsPath);
+-const defaultMessagesFile = join(nlsMetadataPath, 'nls.messages.json');
+-const nlsConfigurationCache = new Map<string, Promise<INLSConfiguration>>();
++const metaData = path.join(FileAccess.asFileUri('').fsPath, 'nls.metadata.json');
++const _cache: Map<string, Promise<lp.NLSConfiguration>> = new Map();
+
+-export async function getNLSConfiguration(language: string, userDataPath: string): Promise<lp.NLSConfiguration> {
+-	if (!product.commit || !(await Promises.exists(defaultMessagesFile))) {
+-		return {
+-			userLocale: 'en',
+-			osLocale: 'en',
+-			resolvedLanguage: 'en',
+-			defaultMessagesFile,
+-
+-			// NLS: below 2 are a relic from old times only used by vscode-nls and deprecated
+-			locale: 'en',
+-			availableLanguages: {}
+-		};
+-	}
+-
+-	const cacheKey = `${language}||${userDataPath}`;
+-	let result = nlsConfigurationCache.get(cacheKey);
+-	if (!result) {
+-		result = resolveNLSConfiguration({ userLocale: language, osLocale: language, commit: product.commit, userDataPath, nlsMetadataPath });
+-		nlsConfigurationCache.set(cacheKey, result);
++export function getNLSConfiguration(language: string, userDataPath: string): Promise<lp.NLSConfiguration> {
++	const key = `${language}||${userDataPath}`;
++	let result = _cache.get(key);
++	if (!result) {
++		// The OS Locale on the remote side really doesn't matter, so we pass in the same language
++		result = lp.getNLSConfiguration("dummy_commit", userDataPath, metaData, language, language).then(value => {
++			if (InternalNLSConfiguration.is(value)) {
++				value._languagePackSupport = true;
++			}
++			// If the configuration has no results keep trying since code-server
++			// doesn't restart when a language is installed so this result would
++			// persist (the plugin might not be installed yet for example).
++			if (value.locale !== 'en' && value.locale !== 'en-us' && Object.keys(value.availableLanguages).length === 0) {
++				_cache.delete(key);
++			}
++			return value;
++		});
++		_cache.set(key, result);
+	}
+-
+	return result;
+ }
++
++export namespace InternalNLSConfiguration {
++	export function is(value: lp.NLSConfiguration): value is lp.InternalNLSConfiguration {
++		const candidate: lp.InternalNLSConfiguration = value as lp.InternalNLSConfiguration;
++		return candidate && typeof candidate._languagePackId === 'string';
++	}
++}
++
++/**
++ * The code below is copied from from src/main.js.
++ */
++
++export const getLocaleFromConfig = async (argvResource: string): Promise<string> => {
++	try {
++		const content = stripComments(await fs.promises.readFile(argvResource, 'utf8'));
++		return JSON.parse(content).locale;
++	} catch (error) {
++		if (error.code !== "ENOENT") {
++			console.warn(error)
++		}
++		return 'en';
++	}
++};
++
++const stripComments = (content: string): string => {
++	const regexp = /('(?:[^\\']*(?:\\.)?)*')|('(?:[^\\']*(?:\\.)?)*')|(\/\*(?:\r?\n|.)*?\*\/)|(\/{2,}.*?(?:(?:\r?\n)|$))/g;
++
++	return content.replace(regexp, (match, _m1, _m2, m3, m4) => {
++		// Only one of m1, m2, m3, m4 matches
++		if (m3) {
++			// A block comment. Replace with nothing
++			return '';
++		} else if (m4) {
++			// A line comment. If it ends in \r?\n then keep it.
++			const length_1 = m4.length;
++			if (length_1 > 2 && m4[length_1 - 1] === '\n') {
++				return m4[length_1 - 2] === '\r' ? '\r\n' : '\n';
++			}
++			else {
++				return '';
++			}
++		} else {
++			// We match a string
++			return match;
++		}
++	});
++};
+\ No newline at end of file
 Index: sagemaker-code-editor/vscode/src/vs/server/node/serverEnvironmentService.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/serverEnvironmentService.ts
@@ -238,6 +358,64 @@ Index: sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/server/node/webClientServer.ts
 +++ sagemaker-code-editor/vscode/src/vs/server/node/webClientServer.ts
+@@ -0,8 +0,10 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+-import { createReadStream, promises } from 'fs';
++import { createReadStream } from 'fs';
++import { Promises } from '../../base/node/pfs.js';
++import * as path from 'path';
+ import * as http from 'http';
+ import * as url from 'url';
+ import * as cookie from 'cookie';
+@@ -30,9 +32,9 @@ import { URI } from '../../base/common/uri.js'
+ import { streamToBuffer } from '../../base/common/buffer.js';
+ import { IProductConfiguration } from '../../base/common/product.js';
+ import { isString } from '../../base/common/types.js';
++import { getLocaleFromConfig, getNLSConfiguration } from '../../server/node/remoteLanguagePacks.js';
+ import { CharCode } from '../../base/common/charCode.js';
+ import { IExtensionManifest } from '../../platform/extensions/common/extensions.js';
+-import { ICSSDevelopmentService } from '../../platform/cssDev/node/cssDevService.js';
+
+ const textMimeType: { [ext: string]: string | undefined } = {
+	'.html': 'text/html',
+@@ -393,25 +394,19 @@ export class WebClientServer {
+			workspaceUri: resolveWorkspaceURI(this._environmentService.args['default-workspace']),
+			productConfiguration,
+-			callbackRoute: callbackRoute
++			callbackRoute: this._callbackRoute	
+ 		};
+ 
+-		const cookies = cookie.parse(req.headers.cookie || '');
+-		const locale = cookies['vscode.nls.locale'] || req.headers['accept-language']?.split(',')[0]?.toLowerCase() || 'en';
+-		let WORKBENCH_NLS_BASE_URL: string | undefined;
+-		let WORKBENCH_NLS_URL: string;
+-		if (!locale.startsWith('en') && this._productService.nlsCoreBaseUrl) {
+-			WORKBENCH_NLS_BASE_URL = this._productService.nlsCoreBaseUrl;
+-			WORKBENCH_NLS_URL = `${WORKBENCH_NLS_BASE_URL}${this._productService.commit}/${this._productService.version}/${locale}/nls.messages.js`;
+-		} else {
+-			WORKBENCH_NLS_URL = ''; // fallback will apply
+-		}
++		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource.fsPath);
++		const nlsConfiguration = await getNLSConfiguration(locale, this._environmentService.userDataPath)
+ 		const nlsBaseUrl = this._productService.extensionsGallery?.nlsBaseUrl;
+ 		const values: { [key: string]: string } = {
+ 			WORKBENCH_WEB_CONFIGURATION: asJSON(workbenchWebConfiguration),
+			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
+-			WORKBENCH_WEB_BASE_URL: staticRoute,
+-			WORKBENCH_NLS_URL,
+-			ORKBENCH_NLS_FALLBACK_URL: `${staticRoute}/out/nls.messages.js`
++			WORKBENCH_WEB_BASE_URL: this._staticRoute,
++			WORKBENCH_NLS_BASE_URL: nlsBaseUrl ? `${nlsBaseUrl}${!nlsBaseUrl.endsWith('/') ? '/' : ''}${this._productService.commit}/${this._productService.version}/` : '',
++			BASE: base,
++ 			VS_BASE: vscodeBase,
++			NLS_CONFIGURATION: asJSON(nlsConfiguration),
+		};
+ 
+ 		if (useTestResolver) {
 @@ -401,7 +405,7 @@ export class WebClientServer {
  			`frame-src 'self' https://*.vscode-cdn.net data:;`,
  			'worker-src \'self\' data: blob:;',
