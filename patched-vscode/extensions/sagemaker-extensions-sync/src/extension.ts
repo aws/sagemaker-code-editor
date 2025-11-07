@@ -19,8 +19,11 @@ export async function activate() {
 	// this extension will only activate within a sagemaker app
 	const isSageMakerApp = !!process.env?.SAGEMAKER_APP_TYPE_LOWERCASE;
 	if (!isSageMakerApp) {
+        console.log('Skipping activation of Sagemaker Extension Sync...');
 		return;
 	}
+
+    console.log('Activating Sagemaker Extension Sync...');
 
 	// get installed extensions. this could be different from pvExtensions b/c vscode sometimes doesn't delete the assets
 	// for an old extension when uninstalling or changing versions
