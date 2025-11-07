@@ -2,7 +2,7 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
 ===================================================================
 --- /dev/null
 +++ sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension.ts
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,179 @@
 +import * as vscode from 'vscode';
 +import * as fs from 'fs';
 +import { SessionWarning } from "./sessionWarning";
@@ -160,6 +160,13 @@ Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/src/extension
 +
 +export function activate(context: vscode.ExtensionContext) {
 +
++    // this extension will only activate within a sagemaker app
++	const isSageMakerApp = !!process.env?.SAGEMAKER_APP_TYPE_LOWERCASE;
++	if (!isSageMakerApp) {
++        console.log('Skipping activation of Sagemaker Extension...');
++		return;
++	}
++
 +    // TODO: log activation of extension
 +    console.log('Activating Sagemaker Extension...');
 +
@@ -303,14 +310,14 @@ Index: sagemaker-code-editor/vscode/build/gulpfile.extensions.js
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/build/gulpfile.extensions.js
 +++ sagemaker-code-editor/vscode/build/gulpfile.extensions.js
-@@ -63,6 +63,7 @@ const compilations = [
-	'extensions/references-view/tsconfig.json',
-	'extensions/search-result/tsconfig.json',
-	'extensions/simple-browser/tsconfig.json',
+@@ -60,6 +60,7 @@ const compilations = [
+ 	'extensions/references-view/tsconfig.json',
+ 	'extensions/search-result/tsconfig.json',
+ 	'extensions/simple-browser/tsconfig.json',
 +	'extensions/sagemaker-extension/tsconfig.json',
-	'extensions/tunnel-forwarding/tsconfig.json',
-	'extensions/typescript-language-features/test-workspace/tsconfig.json',
-	'extensions/typescript-language-features/web/tsconfig.json',
+ 	'extensions/tunnel-forwarding/tsconfig.json',
+ 	'extensions/typescript-language-features/test-workspace/tsconfig.json',
+ 	'extensions/typescript-language-features/web/tsconfig.json',
 Index: sagemaker-code-editor/vscode/extensions/sagemaker-extension/README.md
 ===================================================================
 --- /dev/null
