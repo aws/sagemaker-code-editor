@@ -164,6 +164,13 @@ function renderExtensionAutoUpgradeDisabledNotification() {
 
 export function activate(context: vscode.ExtensionContext) {
 
+    // this extension will only activate within a sagemaker app
+	const isSageMakerApp = !!process.env?.SAGEMAKER_APP_TYPE_LOWERCASE;
+	if (!isSageMakerApp) {
+        console.log('Skipping activation of Sagemaker Extension...');
+		return;
+	}
+
     // TODO: log activation of extension
     console.log('Activating Sagemaker Extension...');
 
