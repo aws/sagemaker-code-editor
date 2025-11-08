@@ -1,6 +1,6 @@
 // constants
-export const PERSISTENT_VOLUME_EXTENSIONS_DIR = "/home/sagemaker-user/sagemaker-code-editor-server-data/extensions";
-export const IMAGE_EXTENSIONS_DIR = "/opt/amazon/sagemaker/sagemaker-code-editor-server-data/extensions";
+export const PERSISTENT_VOLUME_EXTENSIONS_DIR = process.env.PERSISTENT_VOLUME_EXTENSIONS_DIR || "/home/sagemaker-user/sagemaker-code-editor-server-data/extensions";
+export const IMAGE_EXTENSIONS_DIR = process.env.IMAGE_EXTENSIONS_DIR || "/opt/amazon/sagemaker/sagemaker-code-editor-server-data/extensions";
 export const LOG_PREFIX = "[sagemaker-extensions-sync]";
 
 export class ExtensionInfo {
