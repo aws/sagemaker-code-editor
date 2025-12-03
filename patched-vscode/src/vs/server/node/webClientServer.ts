@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createReadStream, promises, existsSync, writeFileSync } from 'fs';
+import { readFile } from 'fs/promises'
+import * as path from 'path';
 import * as http from 'http';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
@@ -27,6 +29,7 @@ import { URI } from '../../base/common/uri.js';
 import { streamToBuffer } from '../../base/common/buffer.js';
 import { IProductConfiguration } from '../../base/common/product.js';
 import { isString, Mutable } from '../../base/common/types.js';
+import { getLocaleFromConfig, getBrowserNLSConfiguration } from '../../server/node/remoteLanguagePacks.js';
 import { CharCode } from '../../base/common/charCode.js';
 import { IExtensionManifest } from '../../platform/extensions/common/extensions.js';
 import { ICSSDevelopmentService } from '../../platform/cssDev/node/cssDevService.js';
@@ -96,7 +99,46 @@ export async function serveFile(filePath: string, cacheControl: CacheControl, lo
 	}
 }
 
+const CHECK_INTERVAL = 60000; // 60 seconds interval
 const APP_ROOT = dirname(FileAccess.asFileUri('').fsPath);
+
+/**
+ * Checks for terminal activity by reading the /dev/pts directory and comparing modification times of the files.
+ *
+ * The /dev/pts directory is used in Unix-like operating systems to represent pseudo-terminal (PTY) devices.
+ * Each active terminal session is assigned a PTY device. These devices are represented as files within the /dev/pts directory.
+ * When a terminal session has activity, such as when a user inputs commands or output is written to the terminal,
+ * the modification time (mtime) of the corresponding PTY device file is updated. By monitoring the modification
+ * times of the files in the /dev/pts directory, we can detect terminal activity.
+ *
+ * If activity is detected (i.e., if any PTY device file was modified within the CHECK_INTERVAL), this function
+ * updates the last activity timestamp.
+ */
+const checkTerminalActivity = (idleFilePath: string) => {
+	fs.readdir('/dev/pts', (err, files) => {
+		if (err) {
+			console.error('Error reading /dev/pts directory:', err);
+			return;
+		}
+
+		const now = new Date();
+		const activityDetected = files.some((file) => {
+			const filePath = path.join('/dev/pts', file);
+			try {
+				const stats = fs.statSync(filePath);
+				const mtime = new Date(stats.mtime).getTime();
+				return now.getTime() - mtime < CHECK_INTERVAL;
+			} catch (error) {
+				console.error('Error reading file stats:', error);
+				return false;
+			}
+		});
+
+		if (activityDetected) {
+			fs.writeFileSync(idleFilePath, now.toISOString());
+		}
+	});
+};
 
 const STATIC_PATH = `/static`;
 const CALLBACK_PATH = `/callback`;
@@ -259,7 +301,10 @@ export class WebClientServer {
 		};
 
 		// Prefix routes with basePath for clients
-		const basePath = getFirstHeader('x-forwarded-prefix') || this._basePath;
+		const proxyPath = this._environmentService.args["base-path"] || "/";
+		const base = relativeRoot(proxyPath);
+		const vscodeBase = relativePath(proxyPath);
+		const basePath = vscodeBase || getFirstHeader("x-forwarded-prefix") || this._basePath;
 
 		const queryConnectionToken = parsedUrl.query[connectionTokenQueryName];
 		if (typeof queryConnectionToken === 'string') {
@@ -301,7 +346,7 @@ export class WebClientServer {
 		let remoteAuthority = (
 			useTestResolver
 				? 'test+test'
-				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host)
+				: (getFirstHeader('x-original-host') || getFirstHeader('x-forwarded-host') || req.headers.host || window.location.host)
 		);
 		if (!remoteAuthority) {
 			return serveError(req, res, 400, `Bad request.`);
@@ -346,6 +391,7 @@ export class WebClientServer {
 		} : undefined;
 
 		const productConfiguration: Partial<Mutable<IProductConfiguration>> = {
+			rootEndpoint: base,
 			embedderIdentifier: 'server-distro',
 			extensionsGallery: this._productService.extensionsGallery,
 		};
@@ -365,7 +411,7 @@ export class WebClientServer {
 
 		const workbenchWebConfiguration = {
 			remoteAuthority,
-			serverBasePath: basePath,
+			serverBasePath: this._basePath,
 			webviewEndpoint: staticRoute + '/out/vs/workbench/contrib/webview/browser/pre',
 			userDataPath: this._environmentService.userDataPath,
 			_wrapWebWorkerExtHostInIframe,
@@ -379,14 +425,22 @@ export class WebClientServer {
 		};
 
 		const cookies = cookie.parse(req.headers.cookie || '');
-		const locale = cookies['vscode.nls.locale'] || req.headers['accept-language']?.split(',')[0]?.toLowerCase() || 'en';
+		const locale = this._environmentService.args.locale || await getLocaleFromConfig(this._environmentService.argvResource.fsPath) || cookies['vscode.nls.locale'] || req.headers['accept-language']?.split(',')[0]?.toLowerCase() || 'en';
 		let WORKBENCH_NLS_BASE_URL: string | undefined;
 		let WORKBENCH_NLS_URL: string;
 		if (!locale.startsWith('en') && this._productService.nlsCoreBaseUrl) {
 			WORKBENCH_NLS_BASE_URL = this._productService.nlsCoreBaseUrl;
 			WORKBENCH_NLS_URL = `${WORKBENCH_NLS_BASE_URL}${this._productService.commit}/${this._productService.version}/${locale}/nls.messages.js`;
 		} else {
-			WORKBENCH_NLS_URL = ''; // fallback will apply
+			try {
+				const nlsFile = await getBrowserNLSConfiguration(locale, this._environmentService.userDataPath);
+				WORKBENCH_NLS_URL = nlsFile
+					? `${vscodeBase}/vscode-remote-resource?path=${encodeURIComponent(nlsFile)}`
+					: '';
+			} catch (error) {
+				console.error("Failed to generate translations", error);
+				WORKBENCH_NLS_URL = '';
+			}
 		}
 
 		const values: { [key: string]: string } = {
@@ -394,7 +448,9 @@ export class WebClientServer {
 			WORKBENCH_AUTH_SESSION: authSessionInfo ? asJSON(authSessionInfo) : '',
 			WORKBENCH_WEB_BASE_URL: staticRoute,
 			WORKBENCH_NLS_URL,
-			WORKBENCH_NLS_FALLBACK_URL: `${staticRoute}/out/nls.messages.js`
+			WORKBENCH_NLS_FALLBACK_URL: `${staticRoute}/out/nls.messages.js`,
+			BASE: base,
+			VS_BASE: vscodeBase
 		};
 
 		// DEV ---------------------------------------------------------------------------------------
@@ -436,7 +492,7 @@ export class WebClientServer {
 			`frame-src 'self' https://*.vscode-cdn.net data:;`,
 			'worker-src \'self\' data: blob:;',
 			'style-src \'self\' \'unsafe-inline\';',
-			'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://openvsxorg.blob.core.windows.net https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;',
+			'connect-src \'self\' ws: wss: https://main.vscode-cdn.net http://localhost:* https://localhost:* https://login.microsoftonline.com/ https://update.code.visualstudio.com https://*.vscode-unpkg.net/ https://default.exp-tas.com/vscode/ab https://vscode-sync.trafficmanager.net https://vscode-sync-insiders.trafficmanager.net https://*.gallerycdn.vsassets.io https://marketplace.visualstudio.com https://az764295.vo.msecnd.net  https://code.visualstudio.com https://*.gallery.vsassets.io https://*.rel.tunnels.api.visualstudio.com wss://*.rel.tunnels.api.visualstudio.com https://*.servicebus.windows.net/ https://vscode.blob.core.windows.net https://vscode.search.windows.net https://vsmarketplacebadges.dev https://vscode.download.prss.microsoft.com https://download.visualstudio.microsoft.com https://*.vscode-unpkg.net https://open-vsx.org;',
 			'font-src \'self\' blob:;',
 			'manifest-src \'self\';'
 		].join(' ');
@@ -540,27 +596,86 @@ export class WebClientServer {
 	}
 
 	/**
-  	 * Handles API requests to retrieve the last activity timestamp.
-    */
- 	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
- 		try {
- 			const tmpDirectory = '/tmp/'
- 			const idleFilePath = join(tmpDirectory, '.sagemaker-last-active-timestamp');
- 
- 			// If idle shutdown file does not exist, this indicates the app UI may never been opened
- 			// Create the initial metadata file
- 			if (!existsSync(idleFilePath)) {
- 				const timestamp = new Date().toISOString();
- 				writeFileSync(idleFilePath, timestamp);
- 			}
- 
- 			const data = await promises.readFile(idleFilePath, 'utf8');
- 
- 			res.statusCode = 200;
- 			res.setHeader('Content-Type', 'application/json');
- 			res.end(JSON.stringify({ lastActiveTimestamp: data }));
- 		} catch (error) {
- 			serveError(req, res, 500, error.message)
- 		}
- 	}
+ 	 * Handles API requests to retrieve the last activity timestamp.
+   */
+	private async _handleIdle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+		try {
+			const tmpDirectory = '/tmp/'
+			const idleFilePath = path.join(tmpDirectory, '.sagemaker-last-active-timestamp');
+
+			// If idle shutdown file does not exist, this indicates the app UI may never been opened
+			// Create the initial metadata file
+			if (!existsSync(idleFilePath)) {
+				const timestamp = new Date().toISOString();
+				writeFileSync(idleFilePath, timestamp);
+			}
+
+			checkTerminalActivity(idleFilePath);
+
+			const data = await readFile(idleFilePath, 'utf8');
+
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json');
+			res.end(JSON.stringify({ lastActiveTimestamp: data }));
+		} catch (error) {
+			serveError(req, res, 500, error.message);
+		}
+	}
+}
+
+
+/**
+ * Remove extra slashes in a URL.
+ *
+ * This is meant to fill the job of `path.join` so you can concatenate paths and
+ * then normalize out any extra slashes.
+ *
+ * If you are using `path.join` you do not need this but note that `path` is for
+ * file system paths, not URLs.
+ */
+export const normalizeUrlPath = (url: string, keepTrailing = false): string => {
+	return url.replace(/\/\/+/g, "/").replace(/\/+$/, keepTrailing ? "/" : "")
+}
+
+/**
+ * Get the relative path that will get us to the root of the page. For each
+ * slash we need to go up a directory.  Will not have a trailing slash.
+ *
+ * For example:
+ *
+ * / => .
+ * /foo => .
+ * /foo/ => ./..
+ * /foo/bar => ./..
+ * /foo/bar/ => ./../..
+ *
+ * All paths must be relative in order to work behind a reverse proxy since we
+ * we do not know the base path.  Anything that needs to be absolute (for
+ * example cookies) must get the base path from the frontend.
+ *
+ * All relative paths must be prefixed with the relative root to ensure they
+ * work no matter the depth at which they happen to appear.
+ *
+ * For Express `req.originalUrl` should be used as they remove the base from the
+ * standard `url` property making it impossible to get the true depth.
+ */
+export const relativeRoot = (originalUrl: string): string => {
+	const depth = (originalUrl.split("?", 1)[0].match(/\//g) || []).length
+	return normalizeUrlPath("./" + (depth > 1 ? "../".repeat(depth - 1) : ""))
+}
+
+/**
+ * Get the relative path to the current resource.
+ *
+ * For example:
+ *
+ * / => .
+ * /foo => ./foo
+ * /foo/ => .
+ * /foo/bar => ./bar
+ * /foo/bar/ => .
+ */
+export const relativePath = (originalUrl: string): string => {
+	const parts = originalUrl.split("?", 1)[0].split("/")
+	return normalizeUrlPath("./" + parts[parts.length - 1])
 }

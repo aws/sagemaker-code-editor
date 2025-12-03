@@ -8,5 +8,4 @@ tsconfig.json
 out/test/**
 out/**
 cgmanifest.json
-yarn.lock
 preview-src/**

@@ -3,51 +3,41 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
-import { FileAccess } from 'vs/base/common/network';
-import * as path from 'vs/base/common/path';
+import * as path from 'path';
+import { promises as fs } from 'fs';
+import { FileAccess } from '../../base/common/network.js';
+import { join } from '../../base/common/path.js';
+import type { INLSConfiguration } from '../../nls.js';
+import { resolveNLSConfiguration } from '../../base/node/nls.js';
 
-import * as lp from 'vs/base/node/languagePacks';
+const nlsMetadataPath = join(FileAccess.asFileUri('').fsPath);
+const nlsConfigurationCache = new Map<string, Promise<INLSConfiguration>>();
 
-const metaData = path.join(FileAccess.asFileUri('').fsPath, 'nls.metadata.json');
-const _cache: Map<string, Promise<lp.NLSConfiguration>> = new Map();
-
-export function getNLSConfiguration(language: string, userDataPath: string): Promise<lp.NLSConfiguration> {
-	const key = `${language}||${userDataPath}`;
-	let result = _cache.get(key);
+export async function getNLSConfiguration(language: string, userDataPath: string): Promise<INLSConfiguration> {
+	const cacheKey = `${language}||${userDataPath}`;
+	let result = nlsConfigurationCache.get(cacheKey);
 	if (!result) {
-		// The OS Locale on the remote side really doesn't matter, so we pass in the same language
-		result = lp.getNLSConfiguration("dummy_commit", userDataPath, metaData, language, language).then(value => {
-			if (InternalNLSConfiguration.is(value)) {
-				value._languagePackSupport = true;
+		// passing a dummy commit which is required to resolve language packs
+		result = resolveNLSConfiguration({ userLocale: language, osLocale: language, commit: 'dummy_commit', userDataPath, nlsMetadataPath });
+		nlsConfigurationCache.set(cacheKey, result);
+		// If the language pack does not yet exist, it defaults to English, which is
+		// then cached and you have to restart even if you then install the pack.
+		result.then((r) => {
+			if (!language.startsWith('en') && r.resolvedLanguage.startsWith('en')) {
+				nlsConfigurationCache.delete(cacheKey);
 			}
-			// If the configuration has no results keep trying since code-server
-			// doesn't restart when a language is installed so this result would
-			// persist (the plugin might not be installed yet for example).
-			if (value.locale !== 'en' && value.locale !== 'en-us' && Object.keys(value.availableLanguages).length === 0) {
-				_cache.delete(key);
-			}
-			return value;
-		});
-		_cache.set(key, result);
+		})
 	}
+
 	return result;
 }
 
-export namespace InternalNLSConfiguration {
-	export function is(value: lp.NLSConfiguration): value is lp.InternalNLSConfiguration {
-		const candidate: lp.InternalNLSConfiguration = value as lp.InternalNLSConfiguration;
-		return candidate && typeof candidate._languagePackId === 'string';
-	}
-}
-
 /**
- * The code below is copied from from src/main.js.
+ * Copied from from src/main.js.
  */
-
 export const getLocaleFromConfig = async (argvResource: string): Promise<string> => {
 	try {
-		const content = stripComments(await fs.promises.readFile(argvResource, 'utf8'));
+		const content = stripComments(await fs.readFile(argvResource, 'utf8'));
 		return JSON.parse(content).locale;
 	} catch (error) {
 		if (error.code !== "ENOENT") {
@@ -57,6 +47,9 @@ export const getLocaleFromConfig = async (argvResource: string): Promise<string>
 	}
 };
 
+/**
+ * Copied from from src/main.js.
+ */
 const stripComments = (content: string): string => {
 	const regexp = /('(?:[^\\']*(?:\\.)?)*')|('(?:[^\\']*(?:\\.)?)*')|(\/\*(?:\r?\n|.)*?\*\/)|(\/{2,}.*?(?:(?:\r?\n)|$))/g;
 
@@ -80,3 +73,41 @@ const stripComments = (content: string): string => {
 		}
 	});
 };
+
+/**
+ * Generate translations then return a path to a JavaScript file that sets the
+ * translations into global variables.  This file is loaded by the browser to
+ * set global variables that the loader uses when looking for translations.
+ *
+ * Normally, VS Code pulls these files from a CDN but we want them to be local.
+ */
+export async function getBrowserNLSConfiguration(locale: string, userDataPath: string): Promise<string> {
+	if (locale.startsWith('en')) {
+		return ''; // Use fallback translations.
+	}
+
+	const nlsConfig = await getNLSConfiguration(locale, userDataPath);
+	const messagesFile = nlsConfig?.languagePack?.messagesFile;
+	const resolvedLanguage = nlsConfig?.resolvedLanguage;
+	if (!messagesFile || !resolvedLanguage) {
+		return ''; // Use fallback translations.
+	}
+
+	const nlsFile = path.join(path.dirname(messagesFile), "nls.messages.js");
+	try {
+		await fs.stat(nlsFile);
+		return nlsFile; // We already generated the file.
+	} catch (error) {
+		// ENOENT is fine, that just means we need to generate the file.
+		if (error.code !== 'ENOENT') {
+			throw error;
+		}
+	}
+
+	const messages = (await fs.readFile(messagesFile)).toString();
+	const content = `globalThis._VSCODE_NLS_MESSAGES=${messages};
+globalThis._VSCODE_NLS_LANGUAGE=${JSON.stringify(resolvedLanguage)};`
+	await fs.writeFile(nlsFile, content, "utf-8");
+
+	return nlsFile;
+}

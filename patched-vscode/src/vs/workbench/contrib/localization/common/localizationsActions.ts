@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize, localize2 } from 'vs/nls';
-import { IQuickInputService, IQuickPickSeparator } from 'vs/platform/quickinput/common/quickInput';
-import { CancellationTokenSource } from 'vs/base/common/cancellation';
-import { DisposableStore } from 'vs/base/common/lifecycle';
-import { Action2, MenuId } from 'vs/platform/actions/common/actions';
-import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { ILanguagePackItem, ILanguagePackService } from 'vs/platform/languagePacks/common/languagePacks';
-import { ILocaleService } from 'vs/workbench/services/localization/common/locale';
-import { IExtensionsWorkbenchService } from 'vs/workbench/contrib/extensions/common/extensions';
+import { localize, localize2 } from '../../../../nls.js';
+import { IQuickInputService, IQuickPickSeparator } from '../../../../platform/quickinput/common/quickInput.js';
+import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
+import { DisposableStore } from '../../../../base/common/lifecycle.js';
+import { Action2, MenuId } from '../../../../platform/actions/common/actions.js';
+import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
+import { ILanguagePackItem, ILanguagePackService } from '../../../../platform/languagePacks/common/languagePacks.js';
+import { ILocaleService } from '../../../services/localization/common/locale.js';
+import { IExtensionsWorkbenchService } from '../../extensions/common/extensions.js';
+import { language } from '../../../../base/common/platform.js';
 
 export class ConfigureDisplayLanguageAction extends Action2 {
 	public static readonly ID = 'workbench.action.configureLocale';
@@ -37,7 +38,18 @@ export class ConfigureDisplayLanguageAction extends Action2 {
 
 		const installedLanguages = await languagePackService.getInstalledLanguages();
 
-		const qp = quickInputService.createQuickPick<ILanguagePackItem>();
+		// Clean any existing (Current) text and add it back only to the correct locale
+		installedLanguages?.forEach(lang => {
+			if (lang.description) {
+				lang.description = lang.description.replace(/ \(Current\)$/, '');
+			}
+			if (lang.id?.toLowerCase() === language.toLowerCase()) {
+				lang.description = (lang.description || '') + localize('currentDisplayLanguage', " (Current)");
+			}
+		});
+
+		const disposables = new DisposableStore();
+		const qp = disposables.add(quickInputService.createQuickPick<ILanguagePackItem>({ useSeparators: true }));
 		qp.matchOnDescription = true;
 		qp.placeholder = localize('chooseLocale', "Select Display Language");
 
@@ -46,7 +58,6 @@ export class ConfigureDisplayLanguageAction extends Action2 {
 			qp.items = items.concat(this.withMoreInfoButton(installedLanguages));
 		}
 
-		const disposables = new DisposableStore();
 		const source = new CancellationTokenSource();
 		disposables.add(qp.onDispose(() => {
 			source.cancel();
