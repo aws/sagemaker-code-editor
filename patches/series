@@ -1,4 +1,5 @@
 tar-fs-upgrade.patch
+electron-update.patch
 sagemaker-extension.diff
 disable-online-services.diff
 disable-telemetry.diff

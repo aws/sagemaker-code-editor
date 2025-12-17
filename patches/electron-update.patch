@@ -1,0 +1,13 @@
+Index: sagemaker-code-editor/vscode/package.json
+===================================================================
+--- sagemaker-code-editor.orig/vscode/package.json
++++ sagemaker-code-editor/vscode/package.json
+@@ -149,7 +149,7 @@  "devDependencies": {
+     "cssnano": "^6.0.3",
+     "debounce": "^1.0.0",
+     "deemon": "^1.8.0",
+-    "electron": "29.4.0",
++    "electron": "38.7.1",
+     "eslint": "8.36.0",
+     "eslint-plugin-header": "3.1.1",
+     "eslint-plugin-jsdoc": "^46.5.0",
