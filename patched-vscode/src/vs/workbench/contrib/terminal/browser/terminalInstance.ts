@@ -31,7 +31,7 @@ import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { CodeDataTransfers, containsDragType } from 'vs/platform/dnd/browser/dnd';
+import { CodeDataTransfers, containsDragType, getPathForFile } from '../../../../platform/dnd/browser/dnd.js';
 import { FileSystemProviderCapabilities, IFileService } from 'vs/platform/files/common/files';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
@@ -2372,9 +2372,9 @@ class TerminalInstanceDragAndDropController extends Disposable implements dom.ID
 			path = URI.file(JSON.parse(rawCodeFiles)[0]);
 		}
 
-		if (!path && e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].path /* Electron only */) {
+		if (!path && e.dataTransfer.files.length > 0 && getPathForFile(e.dataTransfer.files[0])) {
 			// Check if the file was dragged from the filesystem
-			path = URI.file(e.dataTransfer.files[0].path);
+			path = URI.file(getPathForFile(e.dataTransfer.files[0])!);
 		}
 
 		if (!path) {
