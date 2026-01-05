@@ -38,7 +38,7 @@ import { InputBox, MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import { createSingleCallFunction } from 'vs/base/common/functional';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
-import { CodeDataTransfers, containsDragType } from 'vs/platform/dnd/browser/dnd';
+import { CodeDataTransfers, containsDragType, getPathForFile } from '../../../../platform/dnd/browser/dnd';
 import { terminalStrings } from 'vs/workbench/contrib/terminal/common/terminalStrings';
 import { ILifecycleService } from 'vs/workbench/services/lifecycle/common/lifecycle';
 import { IProcessDetails } from 'vs/platform/terminal/common/terminalProcess';
@@ -733,9 +733,9 @@ class TerminalTabsDragAndDrop extends Disposable implements IListDragAndDrop<ITe
 			resource = URI.file(JSON.parse(rawCodeFiles)[0]);
 		}
 
-		if (!resource && e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].path /* Electron only */) {
+		if (!resource && e.dataTransfer.files.length > 0 && getPathForFile(e.dataTransfer.files[0])) {
 			// Check if the file was dragged from the filesystem
-			resource = URI.file(e.dataTransfer.files[0].path);
+			resource = URI.file(getPathForFile(e.dataTransfer.files[0])!);
 		}
 
 		if (!resource) {

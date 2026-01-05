@@ -1,0 +1,224 @@
+Index: sagemaker-code-editor/vscode/package.json
+===================================================================
+--- sagemaker-code-editor.orig/vscode/package.json
++++ sagemaker-code-editor/vscode/package.json
+@@ -149,7 +149,7 @@  "devDependencies": {
+     "cssnano": "^6.0.3",
+     "debounce": "^1.0.0",
+     "deemon": "^1.8.0",
+-    "electron": "29.4.0",
++    "electron": "38.7.1",
+     "eslint": "8.36.0",
+     "eslint-plugin-header": "3.1.1",
+     "eslint-plugin-jsdoc": "^46.5.0",
+Index: sagemaker-code-editor/vscode/src/vs/platform/dnd/browser/dnd.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/platform/dnd/browser/dnd.ts
++++ sagemaker-code-editor/vscode/src/vs/platform/dnd/browser/dnd.ts
+@@ -12,7 +12,7 @@
+ import { ResourceMap } from 'vs/base/common/map';
+ import { parse } from 'vs/base/common/marshalling';
+ import { Schemas } from 'vs/base/common/network';
+-import { isWeb } from 'vs/base/common/platform';
++import { isNative, isWeb } from '../../../base/common/platform';
+ import { URI } from 'vs/base/common/uri';
+ import { localize } from 'vs/nls';
+ import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
+@@ -406,6 +406,18 @@
+		}
+	}
+ }
++
++/**
++ * A helper to get access to Electrons `webUtils.getPathForFile` function
++ * in a safe way without crashing the application when running in the web.
++ */
++export function getPathForFile(file: File): string | undefined {
++	if (isNative && typeof (globalThis as any).vscode?.webUtils?.getPathForFile === 'function') {
++		return (globalThis as any).vscode.webUtils.getPathForFile(file);
++	}
++
++	return undefined;
++}
+
+ //#endregion
+
+Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/terminal/browser/terminalTabsList.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/terminal/browser/terminalTabsList.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/terminal/browser/terminalTabsList.ts
+@@ -38,7 +38,7 @@
+ import { createSingleCallFunction } from 'vs/base/common/functional';
+ import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
+ import { KeyCode } from 'vs/base/common/keyCodes';
+-import { CodeDataTransfers, containsDragType } from 'vs/platform/dnd/browser/dnd';
++import { CodeDataTransfers, containsDragType, getPathForFile } from '../../../../platform/dnd/browser/dnd';
+ import { terminalStrings } from 'vs/workbench/contrib/terminal/common/terminalStrings';
+ import { ILifecycleService } from 'vs/workbench/services/lifecycle/common/lifecycle';
+ import { IProcessDetails } from 'vs/platform/terminal/common/terminalProcess';
+@@ -733,9 +733,9 @@ class TerminalTabsDragAndDrop extends Disposable
+			resource = URI.file(JSON.parse(rawCodeFiles)[0]);
+		}
+
+-		if (!resource && e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].path /* Electron only */) {
+-			// Check if the file was dragged from the filesystem
+-			resource = URI.file(e.dataTransfer.files[0].path);
++		if (!resource && e.dataTransfer.files.length > 0 && getPathForFile(e.dataTransfer.files[0])) {
++			// Check if the file was dragged from the filesystem
++			resource = URI.file(getPathForFile(e.dataTransfer.files[0])!);
+		}
+
+		if (!resource) {
+Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/terminal/browser/terminalInstance.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/terminal/browser/terminalInstance.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/terminal/browser/terminalInstance.ts
+@@ -31,7 +31,7 @@
+ import { ICommandService } from 'vs/platform/commands/common/commands';
+ import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+ import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+-import { CodeDataTransfers, containsDragType } from 'vs/platform/dnd/browser/dnd';
++import { CodeDataTransfers, containsDragType, getPathForFile } from '../../../../platform/dnd/browser/dnd';
+ import { FileSystemProviderCapabilities, IFileService } from 'vs/platform/files/common/files';
+ import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+ import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
+@@ -2372,9 +2372,9 @@ class TerminalInstanceDragAndDropController extends Disposable
+			path = URI.file(JSON.parse(rawCodeFiles)[0]);
+		}
+
+-		if (!path && e.dataTransfer.files.length > 0 && e.dataTransfer.files[0].path /* Electron only */) {
+-			// Check if the file was dragged from the filesystem
+-			path = URI.file(e.dataTransfer.files[0].path);
++		if (!path && e.dataTransfer.files.length > 0 && getPathForFile(e.dataTransfer.files[0])) {
++			// Check if the file was dragged from the filesystem
++			path = URI.file(getPathForFile(e.dataTransfer.files[0])!);
+		}
+
+		if (!path) {
+Index: sagemaker-code-editor/vscode/src/vs/workbench/contrib/files/browser/fileActions.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/workbench/contrib/files/browser/fileActions.ts
++++ sagemaker-code-editor/vscode/src/vs/workbench/contrib/files/browser/fileActions.ts
+@@ -60,6 +60,7 @@
+ import { Categories } from 'vs/platform/action/common/actionCommonCategories';
+ import { ILocalizedString } from 'vs/platform/action/common/action';
+ import { VSBuffer } from 'vs/base/common/buffer';
++import { getPathForFile } from '../../../../platform/dnd/browser/dnd';
+
+ export const NEW_FILE_COMMAND_ID = 'explorer.newFile';
+ export const NEW_FILE_LABEL = nls.localize2('newFile', "New File...");
+@@ -1121,7 +1122,20 @@ export const pasteFileHandler = async (
+		const message = toPaste.files.length > 1 ?
+			nls.localize('confirmMultiPasteNative', "Are you sure you want to paste the following {0} items?", toPaste.files.length) :
+			nls.localize('confirmPasteNative', "Are you sure you want to paste '{0}'?", basename(toPaste.type === 'paths' ? toPaste.files[0].fsPath : toPaste.files[0].name));
+-		const detail = toPaste.files.length > 1 ? getFileNamesMessage(toPaste.files.map(item => toPaste.type === 'paths' ? item.path : (item as File).name)) : undefined;
++		const detail = toPaste.files.length > 1 ? getFileNamesMessage(toPaste.files.map(item => {
++			if (URI.isUri(item)) {
++				return item.fsPath;
++			}
++
++			if (toPaste.type === 'paths') {
++				const path = getPathForFile(item);
++				if (path) {
++					return path;
++				}
++			}
++
++			return item.name;
++		})) : undefined;
+		const confirmation = await dialogService.confirm({
+			message,
+			detail,
+@@ -1273,13 +1287,13 @@
+ async function getFilesToPaste(fileList: FileList | undefined, clipboardService: IClipboardService): Promise<FilesToPaste> {
+	if (fileList && fileList.length > 0) {
+		// with a `fileList` we support natively pasting file from disk from clipboard
+-		const resources = [...fileList].filter(file => !!file.path && isAbsolute(file.path)).map(file => URI.file(file.path));
++		const resources = [...fileList].map(file => getPathForFile(file)).filter(filePath => !!filePath && isAbsolute(filePath)).map((filePath) => URI.file(filePath!));
+		if (resources.length) {
+			return { type: 'paths', files: resources, };
+		}
+
+		// Support pasting files that we can't read from disk
+-		return { type: 'data', files: [...fileList].filter(file => !file.path) };
++		return { type: 'data', files: [...fileList].filter(file => !getPathForFile(file)) };
+	} else {
+		// otherwise we fallback to reading resources from our clipboard service
+		return { type: 'paths', files: resources.distinctParents(await clipboardService.readResources(), resource => resource) };
+Index: sagemaker-code-editor/vscode/src/vs/base/parts/ipc/electron-main/ipcMain.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/base/parts/ipc/electron-main/ipcMain.ts
++++ sagemaker-code-editor/vscode/src/vs/base/parts/ipc/electron-main/ipcMain.ts
+@@ -111,7 +111,7 @@
+
+		const sender = event.senderFrame;
+
+-		const url = sender.url;
++		const url = sender?.url;
+		// `url` can be `undefined` when running tests from playwright https://github.com/microsoft/vscode/issues/147301
+		// and `url` can be `about:blank` when reloading the window
+		// from performance tab of devtools https://github.com/electron/electron/issues/39427.
+@@ -133,7 +133,7 @@
+			return false; // unexpected sender
+		}
+
+-		if (sender.parent !== null) {
++		if (sender?.parent !== null) {
+			onUnexpectedError(`Refused to handle ipcMain event for channel '${channel}' because sender of origin '${host}' is not a main frame.`);
+			return false; // unexpected frame
+		}
+Index: sagemaker-code-editor/vscode/src/vs/platform/menubar/electron-main/menubar.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/platform/menubar/electron-main/menubar.ts
++++ sagemaker-code-editor/vscode/src/vs/platform/menubar/electron-main/menubar.ts
+@@ -3,7 +3,7 @@
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+-import { app, BrowserWindow, KeyboardEvent, Menu, MenuItem, MenuItemConstructorOptions, WebContents } from 'electron';
++import { app, BrowserWindow, BaseWindow, KeyboardEvent, Menu, MenuItem, MenuItemConstructorOptions, WebContents } from 'electron';
+ import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from 'vs/base/common/actions';
+ import { RunOnceScheduler } from 'vs/base/common/async';
+ import { CancellationToken } from 'vs/base/common/cancellation';
+@@ -62,7 +62,7 @@
+
+	private keybindings: { [commandId: string]: IMenubarKeybinding };
+
+-	private readonly fallbackMenuHandlers: { [id: string]: (menuItem: MenuItem, browserWindow: BrowserWindow | undefined, event: KeyboardEvent) => void } = Object.create(null);
++	private readonly fallbackMenuHandlers: { [id: string]: (menuItem: MenuItem, browserWindow: BaseWindow | undefined, event: KeyboardEvent) => void } = Object.create(null);
+
+	constructor(
+		@IUpdateService private readonly updateService: IUpdateService,
+@@ -285,7 +285,7 @@
+			const dockMenu = new Menu();
+			dockMenu.append(new MenuItem({ label: this.mnemonicLabel(nls.localize({ key: 'miNewWindow', comment: ['&& denotes a mnemonic'] }, "New &&Window")), click: () => this.windowsMainService.openEmptyWindow({ context: OpenContext.DOCK }) }));
+
+-			app.dock.setMenu(dockMenu);
++			app.dock!.setMenu(dockMenu);
+		}
+
+		// File
+@@ -741,8 +741,8 @@
+		return new MenuItem(this.withKeybinding(commandId, options));
+	}
+
+-	private makeContextAwareClickHandler(click: (menuItem: MenuItem, win: BrowserWindow, event: KeyboardEvent) => void, contextSpecificHandlers: IMenuItemClickHandler): (menuItem: MenuItem, win: BrowserWindow | undefined, event: KeyboardEvent) => void {
+-		return (menuItem: MenuItem, win: BrowserWindow | undefined, event: KeyboardEvent) => {
++	private makeContextAwareClickHandler(click: (menuItem: MenuItem, win: BaseWindow, event: KeyboardEvent) => void, contextSpecificHandlers: IMenuItemClickHandler): (menuItem: MenuItem, win: BaseWindow | undefined, event: KeyboardEvent) => void {
++		return (menuItem: MenuItem, win: BaseWindow | undefined, event: KeyboardEvent) => {
+
+			// No Active Window
+			const activeWindow = BrowserWindow.getFocusedWindow();
+Index: sagemaker-code-editor/vscode/src/vs/code/electron-main/app.ts
+===================================================================
+--- sagemaker-code-editor.orig/vscode/src/vs/code/electron-main/app.ts
++++ sagemaker-code-editor/vscode/src/vs/code/electron-main/app.ts
+@@ -195,7 +195,7 @@
+		const supportedSvgSchemes = new Set([Schemas.file, Schemas.vscodeFileResource, Schemas.vscodeRemoteResource, Schemas.vscodeManagedRemoteResource, 'devtools']);
+
+		// But allow them if they are made from inside an webview
+-		const isSafeFrame = (requestFrame: WebFrameMain | undefined): boolean => {
++		const isSafeFrame = (requestFrame: WebFrameMain | null | undefined): boolean => {
+			for (let frame: WebFrameMain | null | undefined = requestFrame; frame; frame = frame.parent) {
+				if (frame.url.startsWith(`${Schemas.vscodeWebview}://`)) {
+					return true;

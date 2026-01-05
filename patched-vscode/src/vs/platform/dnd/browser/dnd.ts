@@ -12,7 +12,7 @@ import { VSBuffer } from 'vs/base/common/buffer';
 import { ResourceMap } from 'vs/base/common/map';
 import { parse } from 'vs/base/common/marshalling';
 import { Schemas } from 'vs/base/common/network';
-import { isWeb } from 'vs/base/common/platform';
+import { isNative, isWeb } from '../../../base/common/platform';
 import { URI } from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
 import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
@@ -405,6 +405,18 @@ export class LocalSelectionTransfer<T> {
 			this.proto = proto;
 		}
 	}
+}
+
+/**
+ * A helper to get access to Electrons `webUtils.getPathForFile` function
+ * in a safe way without crashing the application when running in the web.
+ */
+export function getPathForFile(file: File): string | undefined {
+	if (isNative && typeof (globalThis as any).vscode?.webUtils?.getPathForFile === 'function') {
+		return (globalThis as any).vscode.webUtils.getPathForFile(file);
+	}
+
+	return undefined;
 }
 
 //#endregion
