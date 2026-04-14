@@ -21,3 +21,4 @@ sagemaker-extensions-sync.patch
 display-language.patch
 custom-extensions-marketplace.diff
 validate-http-request-referer.patch
+sanitize-terminal-sendtext-paths.diff

@@ -68,3 +68,29 @@ export function sanitizeCwd(cwd: string): string {
 export function shouldUseEnvironmentVariableCollection(slc: IShellLaunchConfig): boolean {
 	return !slc.strictEnv;
 }
+
+/**
+ * Sanitize shell-dangerous characters in path segments of terminal commands.
+ * This targets command injection via malicious folder/file names containing
+ * shell metacharacters like $(), backticks, etc. that get interpolated when
+ * extensions send raw commands via terminal.sendText().
+ *
+ * The function identifies path-like segments following 'cd' commands and
+ * escapes shell metacharacters to prevent command substitution.
+ */
+export function sanitizeCdPathsInCommand(text: string): string {
+	// Match 'cd' followed by a path, terminated by ; && || & or end of string
+	// This handles patterns like: cd /path/to/$(evil) && python file.py
+	return text.replace(
+		/\bcd\s+((?:[^\s;|&]|\\ )+)/g,
+		(_match: string, path: string) => {
+			// If the path is already properly quoted (single or double quotes), leave it alone
+			if (/^'.*'$/.test(path) || /^".*"$/.test(path)) {
+				return `cd ${path}`;
+			}
+			// Escape shell metacharacters that enable command injection
+			const sanitized = path.replace(/([\$`!#&|;(){}<>])/g, '\\$1');
+			return `cd ${sanitized}`;
+		}
+	);
+}
