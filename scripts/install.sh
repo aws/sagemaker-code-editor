@@ -84,8 +84,12 @@ if [ "$CREATE_TARBALL" = true ]; then
   bash ${PROJ_ROOT}/scripts/create_code_editor_tarball.sh -v ${VERSION}
 fi
 
-# Copy patched files to patches-vscode
+# Copy patched files to patched-vscode, preserving security-patched yarn.lock
+cp patched-vscode/yarn.lock patched-vscode/yarn.lock.bak
+cp patched-vscode/remote/yarn.lock patched-vscode/remote/yarn.lock.bak
 cp -R vscode/* patched-vscode/
+mv patched-vscode/yarn.lock.bak patched-vscode/yarn.lock
+mv patched-vscode/remote/yarn.lock.bak patched-vscode/remote/yarn.lock
 
 # Build the project
 printf "\n======== Building project in ${PROJ_ROOT}/vscode ========\n"
