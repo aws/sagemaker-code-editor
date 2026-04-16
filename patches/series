@@ -1,4 +1,5 @@
 tar-fs-upgrade.patch
+upgrade-vulnerable-deps.patch
 electron-update.patch
 sagemaker-extension.diff
 disable-online-services.diff
