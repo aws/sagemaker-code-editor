@@ -77,7 +77,12 @@ export function sanitizePathsInCommand(text: string): string {
 	// Strip newlines and null bytes to prevent command injection via line splitting
 	let result = text.replace(/[\r\n\x00]/g, ' ');
 
-	// 1. Handle double-quoted paths containing '/' — escape $(), ${}, backticks
+	// 1. Escape complete $(...), ${...}, `...` constructs followed by / (path context)
+	result = result.replace(/(?<!\\)\$\(([^)]*(?:\([^)]*\)[^)]*)*)\)\//g, '\\$($1)/');
+	result = result.replace(/(?<!\\)\$\{([^}]*)\}\//g, '\\${$1}/');
+	result = result.replace(/(?<!\\)`([^`]*)`\//g, '\\`$1\\`/');
+
+	// 2. Handle double-quoted paths containing '/' — escape $(), ${}, backticks
 	result = result.replace(
 		/"((?:[^"\\]|\\.)*\/(?:[^"\\]|\\.)*)"/g,
 		(_match: string, inner: string) => {
@@ -89,7 +94,7 @@ export function sanitizePathsInCommand(text: string): string {
 		}
 	);
 
-	// 2. Handle unquoted path-like tokens (contain '/') — escape $(), ${}, backticks
+	// 3. Handle unquoted path-like tokens (contain '/') — escape $(), ${}, backticks
 	result = result.replace(
 		/(?<=[;\s&|>]|^)([^\s;|&<>]*\/[^\s;|&<>]*)/gm,
 		(pathToken: string) => {
