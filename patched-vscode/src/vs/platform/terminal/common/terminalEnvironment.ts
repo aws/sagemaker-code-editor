@@ -70,27 +70,38 @@ export function shouldUseEnvironmentVariableCollection(slc: IShellLaunchConfig):
 }
 
 /**
- * Sanitize shell-dangerous characters in path segments of terminal commands.
- * This targets command injection via malicious folder/file names containing
- * shell metacharacters like $(), backticks, etc. that get interpolated when
- * extensions send raw commands via terminal.sendText().
- *
- * The function identifies path-like segments following 'cd' commands and
- * escapes shell metacharacters to prevent command substitution.
+ * Sanitize command substitution patterns ($(), ${}, ``) in path-like segments
+ * of terminal commands to prevent injection via malicious folder/file names.
  */
-export function sanitizeCdPathsInCommand(text: string): string {
-	// Match 'cd' followed by a path, terminated by ; && || & or end of string
-	// This handles patterns like: cd /path/to/$(evil) && python file.py
-	return text.replace(
-		/\bcd\s+((?:[^\s;|&]|\\ )+)/g,
-		(_match: string, path: string) => {
-			// If the path is already properly quoted (single or double quotes), leave it alone
-			if (/^'.*'$/.test(path) || /^".*"$/.test(path)) {
-				return `cd ${path}`;
-			}
-			// Escape shell metacharacters that enable command injection
-			const sanitized = path.replace(/([\$`!#&|;(){}<>])/g, '\\$1');
-			return `cd ${sanitized}`;
+export function sanitizePathsInCommand(text: string): string {
+	// Strip newlines and null bytes to prevent command injection via line splitting
+	let result = text.replace(/[\r\n\x00]/g, ' ');
+
+	// 1. Handle double-quoted paths containing '/' — escape $(), ${}, backticks
+	result = result.replace(
+		/"((?:[^"\\]|\\.)*\/(?:[^"\\]|\\.)*)"/g,
+		(_match: string, inner: string) => {
+			const sanitized = inner
+				.replace(/(?<![\\])\$\(/g, '\\$(')
+				.replace(/(?<![\\])\$\{/g, '\\${')
+				.replace(/(?<![\\])`/g, '\\`');
+			return `"${sanitized}"`;
 		}
 	);
+
+	// 2. Handle unquoted path-like tokens (contain '/') — escape $(), ${}, backticks
+	result = result.replace(
+		/(?<=[;\s&|>]|^)([^\s;|&<>]*\/[^\s;|&<>]*)/gm,
+		(pathToken: string) => {
+			if (pathToken.startsWith("'") || pathToken.startsWith('"')) {
+				return pathToken;
+			}
+			return pathToken
+				.replace(/(?<![\\])\$\(/g, '\\$(')
+				.replace(/(?<![\\])\$\{/g, '\\${')
+				.replace(/(?<![\\])`/g, '\\`');
+		}
+	);
+
+	return result;
 }
