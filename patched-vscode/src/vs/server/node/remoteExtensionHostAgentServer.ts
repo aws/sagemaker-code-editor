@@ -124,13 +124,6 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 			return void res.end(this._productService.commit || '');
 		}
 
-		// Delay shutdown
-		if (pathname === '/delay-shutdown') {
-			this._delayShutdown();
-			res.writeHead(200);
-			return void res.end('OK');
-		}
-
 		if (!httpRequestHasValidConnectionToken(this._connectionToken, req, parsedUrl)) {
 			// invalid connection token
 			return serveError(req, res, 403, `Forbidden.`);
@@ -627,18 +620,6 @@ class RemoteExtensionHostAgentServer extends Disposable implements IServerAPI {
 			this._logService.info('Last EH closed, shutting down');
 			this.dispose();
 			process.exit(0);
-		}
-	}
-
-	/**
-	 * If the server is in a shutdown timeout, cancel it and start over
-	 */
-	private _delayShutdown(): void {
-		if (this.shutdownTimer) {
-			console.log('Got delay-shutdown request while in shutdown timeout, delaying');
-			this._logService.info('Got delay-shutdown request while in shutdown timeout, delaying');
-			this._cancelShutdown();
-			this._waitThenShutdown();
 		}
 	}
 
