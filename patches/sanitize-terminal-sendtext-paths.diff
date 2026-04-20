@@ -1,16 +1,17 @@
 Sanitize path-like segments in terminal sendText to prevent command injection
 
 Broadens sanitization from cd-only paths to all path-like tokens in
-terminal.sendText(). Adds newline/null byte stripping, narrows escaping
-to only command substitution patterns ($(), ${}, backticks), and handles
-double-quoted paths. This prevents injection via malicious folder names
-in any command, not just cd.
+terminal.sendText(). Uses a three-pass approach: (1) escape complete
+$(), ${}, backtick constructs followed by / to handle multi-token
+payloads like $(curl google.com)/test.py, (2) escape patterns inside
+double-quoted paths, (3) escape residual patterns in unquoted path-like
+tokens. Also strips newlines and null bytes to prevent line splitting.
 
 Index: sagemaker-code-editor/vscode/src/vs/platform/terminal/common/terminalEnvironment.ts
 ===================================================================
 --- sagemaker-code-editor.orig/vscode/src/vs/platform/terminal/common/terminalEnvironment.ts
 +++ sagemaker-code-editor/vscode/src/vs/platform/terminal/common/terminalEnvironment.ts
-@@ -68,3 +68,40 @@
+@@ -68,3 +68,45 @@
  export function shouldUseEnvironmentVariableCollection(slc: IShellLaunchConfig): boolean {
  	return !slc.strictEnv;
  }
@@ -23,7 +24,12 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/terminal/common/terminalEnvi
 +	// Strip newlines and null bytes to prevent command injection via line splitting
 +	let result = text.replace(/[\r\n\x00]/g, ' ');
 +
-+	// 1. Handle double-quoted paths containing '/' — escape $(), ${}, backticks
++	// 1. Escape complete $(...), ${...}, `...` constructs followed by / (path context)
++	result = result.replace(/(?<!\\)\$\(([^)]*(?:\([^)]*\)[^)]*)*)\)\//g, '\\$($1)/');
++	result = result.replace(/(?<!\\)\$\{([^}]*)\}\//g, '\\${$1}/');
++	result = result.replace(/(?<!\\)`([^`]*)`\//g, '\\`$1\\`/');
++
++	// 2. Handle double-quoted paths containing '/' — escape $(), ${}, backticks
 +	result = result.replace(
 +		/"((?:[^"\\]|\\.)*\/(?:[^"\\]|\\.)*)"/g,
 +		(_match: string, inner: string) => {
@@ -35,7 +41,7 @@ Index: sagemaker-code-editor/vscode/src/vs/platform/terminal/common/terminalEnvi
 +		}
 +	);
 +
-+	// 2. Handle unquoted path-like tokens (contain '/') — escape $(), ${}, backticks
++	// 3. Handle unquoted path-like tokens (contain '/') — escape $(), ${}, backticks
 +	result = result.replace(
 +		/(?<=[;\s&|>]|^)([^\s;|&<>]*\/[^\s;|&<>]*)/gm,
 +		(pathToken: string) => {
