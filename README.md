@@ -1,5 +1,8 @@
 ## SageMaker Code Editor
 
+> [!IMPORTANT]
+> This open source project is no longer being actively maintained and will only receive critical security fixes. Active development has moved to the [Code Editor repository](https://github.com/aws/code-editor). For the latest features and updates, please use Code Editor.
+
 This is the repo for `sagemaker-code-editor`. For more information on Code Editor on SageMaker, please refer to: https://docs.aws.amazon.com/sagemaker/latest/dg/code-editor.html
 
 The `patched-vscode` folder's only usage is to help reviewers review the patch changes. To ease reviewing patches (`.diff` files), whenever we raise a PR for adding/updating a patch, we will also apply the patches to this directory so that this folder's diff shows up in the PR.
